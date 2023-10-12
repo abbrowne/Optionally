@@ -1,0 +1,270 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
+
+```{r load packages}
+
+#install.packages("haven")
+#install.packages("readxl")
+#install.packages("dplyr")
+#install.packages('purrr')
+#install.packages('RQuantLib')
+#install.packages('bizdays')
+library(readxl)
+library(dplyr)
+library(haven)
+library(purrr)
+library(stringr)
+library(RQuantLib)
+library(bizdays)
+##Update below with dates for full range of interest
+load_quantlib_calendars("UnitedStates/NYSE",from="2000-01-01",to="2030-12-31")
+##Custom functions
+
+# Create function to aggregate formatted option chain into designated groups
+option_chain_aggregator = function(input_option_chain, min_strike_ratio=NA, max_strike_ratio=NA,min_avg_days_to_expiry=NA,max_avg_days_to_expiry=NA){
+  input_ticker = unique(input_option_chain$underlying)
+  input_date = unique(input_option_chain$quote_date)
+  input_style = unique(input_option_chain$style)
+  input_avg_underlying = unique(input_option_chain$open_close_avg)
+  input_option_chain$days_to_expiry = as.numeric(as.Date(input_option_chain$expiration)-as.Date(input_option_chain$quote_date))
+  input_option_chain$business_days_to_expiry = as.numeric(bizdays(as.Date(input_option_chain$quote_date),as.Date(input_option_chain$expiration), "QuantLib/UnitedStates/NYSE"))
+  input_option_chain$mean_days_to_expiry = mean(c(input_option_chain$days_to_expiry,input_option_chain$business_days_to_expiry))
+  expiry_dates = unique(input_option_chain$expiration)
+  if(length(input_ticker) > 1){
+    return("Error: Must provide input with only 1 included ticker")
+  }
+  if(length(input_date) > 1){
+    return("Error: Must provide input with only 1 quote date")
+  }
+  if(length(input_avg_underlying) > 1){
+    return("Error: Differing underlying average for the same day")
+  }
+  if(is.na(min_strike_ratio) & is.na(max_strike_ratio)){
+    return("Error: Must provide strike ratios to aggregate on")
+  }else if(is.na(min_strike_ratio) & !is.na(max_strike_ratio)){
+    input_option_chain = input_option_chain[input_option_chain$option_ratio <= max_strike_ratio,]
+    input_strike_range = paste0("x <= ", max_strike_ratio)
+  }else if(!is.na(min_strike_ratio) & is.na(max_strike_ratio)){
+    input_option_chain = input_option_chain[input_option_chain$option_ratio > min_strike_ratio,]
+    input_strike_range = paste0(min_strike_ratio," < x")
+  }else if(!is.na(min_strike_ratio) & !is.na(max_strike_ratio)){
+    input_option_chain = input_option_chain[input_option_chain$option_ratio > min_strike_ratio,]
+    input_option_chain = input_option_chain[input_option_chain$option_ratio <= max_strike_ratio,]
+    input_strike_range = paste0(min_strike_ratio," < x <= ", max_strike_ratio)
+  }
+  if(is.na(min_avg_days_to_expiry) & is.na(max_avg_days_to_expiry)){
+    return("Error: Must provide expiration day ranges to aggregate on")
+  }else if(is.na(min_avg_days_to_expiry) & !is.na(max_avg_days_to_expiry)){
+    input_option_chain = input_option_chain[input_option_chain$mean_days_to_expiry < max_avg_days_to_expiry,]
+    input_expiry_range = paste0("x <= ", max_avg_days_to_expiry)
+  }else if(!is.na(min_avg_days_to_expiry) & is.na(max_avg_days_to_expiry)){
+    input_option_chain = input_option_chain[input_option_chain$option_ratio >= min_avg_days_to_expiry,]
+    input_expiry_range = paste0(min_avg_days_to_expiry," < x")
+  }else if(!is.na(min_avg_days_to_expiry) & !is.na(max_avg_days_to_expiry)){
+    input_option_chain = input_option_chain[input_option_chain$option_ratio >= min_avg_days_to_expiry,]
+    input_option_chain = input_option_chain[input_option_chain$option_ratio < max_avg_days_to_expiry,]
+    input_expiry_range = paste0(min_avg_days_to_expiry," < x <= ", max_avg_days_to_expiry)
+  }
+  temp_results <- list("option_underlying_ticker"=input_ticker,
+                       "option_quote_date"=input_date,
+                       "option_underlying_open_close_avg"=input_avg_underlying,
+                       "option_strike_min"=min_strike_ratio*input_avg_underlying,
+                       "option_strike_max"=min_strike_ratio*input_avg_underlying,
+                       "option_strike_range"=input_strike_range,
+                       "option_expiry_range"=input_expiry_range,
+                       "option_style"=input_style,
+                       "option_call_total_volume"=sum(sub_option_chain$volume[sub_option_chain$type == "call"],na.rm = TRUE),
+                       "option_call_total_open_interest"=sum(sub_option_chain$open_interest[sub_option_chain$type == "call"],na.rm = TRUE),
+                       "option_call_mean_delta"=mean(sub_option_chain$delta[sub_option_chain$type == "call"],na.rm = TRUE),
+                       "option_call_mean_gamma"=mean(sub_option_chain$gamma[sub_option_chain$type == "call"],na.rm = TRUE),
+                       "option_call_mean_theta"=mean(sub_option_chain$theta[sub_option_chain$type == "call"],na.rm = TRUE),
+                       "option_call_mean_vega"=mean(sub_option_chain$vega[sub_option_chain$type == "call"],na.rm = TRUE),
+                       "option_call_mean_implied_volatility"=mean(sub_option_chain$implied_volatility[sub_option_chain$type == "call"],na.rm = TRUE),
+                       "option_put_total_volume"=sum(sub_option_chain$volume[sub_option_chain$type == "put"],na.rm = TRUE),
+                       "option_put_total_open_interest"=sum(sub_option_chain$open_interest[sub_option_chain$type == "put"],na.rm = TRUE),
+                       "option_put_mean_delta"=mean(sub_option_chain$delta[sub_option_chain$type == "put"],na.rm = TRUE),
+                       "option_put_mean_gamma"=mean(sub_option_chain$gamma[sub_option_chain$type == "put"],na.rm = TRUE),
+                       "option_put_mean_theta"=mean(sub_option_chain$theta[sub_option_chain$type == "put"],na.rm = TRUE),
+                       "option_put_mean_vega"=mean(sub_option_chain$vega[sub_option_chain$type == "put"],na.rm = TRUE),
+                       "option_put_mean_implied_volatility"=mean(sub_option_chain$implied_volatility[sub_option_chain$type == "put"],na.rm = TRUE))
+  temp_results <- as.data.frame(temp_results)
+  return(temp_results)
+}
+
+```
+
+```{r explore options data and aggregation}
+
+##First merge stock data by date and calculate averages
+##Second aggregate options by strike ranges
+##Third aggregate options by expiry ranges (use average of days and business days to expiry)
+##  Suggest starting with <10, 10-25, 25-50, 50-100, 100-200, 200-350, >350
+##Fourth merge option ratio and expiry ranges by date and calculate averages
+
+new_directory = "C:/Users/Andy/Downloads/Investing files/"
+
+# Change the working directory
+setwd(new_directory)
+
+# Print the current working directory to verify the change
+print(getwd())
+
+# Get list of option and stock files
+
+# Load SP500 tickers
+sp500_table = read_xlsx('SP500_companies.xlsx')
+#print(sp500_table.head())
+#print(sp500_table['Symbol'])
+sp500_tickers = sp500_table$Symbol
+head(sp500_tickers)
+
+# Load options data
+dfOptions = read.delim("2013-01-02options.cvs",header=TRUE,sep=",")
+
+# Displaying the first few rows of the dataframe
+head(dfOptions)
+
+# Load stock data
+dfStocks = read.delim("2013-01-02stocks.cvs",header=TRUE,sep=",")
+head(dfStocks)
+
+#Filter stocks to SP500 tickers
+filteredStocks = dfStocks %>% 
+  filter(symbol %in% sp500_tickers)
+#Filter options to SP500 tickers
+filteredOptions = dfOptions %>% 
+  filter(underlying %in% sp500_tickers)
+#Determine daily average from open and close values for each ticker
+filteredStocks = filteredStocks %>% 
+  mutate(open_close_avg = (filteredStocks$open + filteredStocks$close)/2)
+
+# Add stock openclose average to options df and ratio with strike price
+filteredOptions$open_close_avg = NA
+for(temp_i in 1:length(filteredStocks$symbol)){
+  temp_symbol = filteredStocks$symbol[temp_i]
+  filteredOptions$open_close_avg[filteredOptions$underlying == temp_symbol] = 
+    filteredStocks$open_close_avg[filteredStocks$symbol == temp_symbol]
+}
+filteredOptions$option_ratio = filteredOptions$strike / filteredOptions$open_close_avg
+
+new_chain <- NULL
+for(temp_ticker_i in 1:length(sp500_tickers)){
+  temp_ticker = sp500_tickers[temp_ticker_i]
+  if(temp_ticker %in% filteredOptions$underlying){
+    test_chain = filteredOptions[filteredOptions$underlying == temp_ticker,]
+  
+    ##Aggregate over all strike ranges
+    test_result = option_chain_aggregator(test_chain,max_strike_ratio = 0.5)
+    test_result = rbind(test_result,option_chain_aggregator(test_chain,max_strike_ratio = 0.75,min_strike_ratio = 0.5))
+    test_result = rbind(test_result,option_chain_aggregator(test_chain,max_strike_ratio = 0.9,min_strike_ratio = 0.75))
+    test_result = rbind(test_result,option_chain_aggregator(test_chain,max_strike_ratio = 0.95,min_strike_ratio = 0.9))
+    test_result = rbind(test_result,option_chain_aggregator(test_chain,max_strike_ratio = 1,min_strike_ratio = 0.95))
+    test_result = rbind(test_result,option_chain_aggregator(test_chain,max_strike_ratio = 1.1,min_strike_ratio = 1.05))
+    test_result = rbind(test_result,option_chain_aggregator(test_chain,max_strike_ratio = 1.25,min_strike_ratio = 1.1))
+    test_result = rbind(test_result,option_chain_aggregator(test_chain,max_strike_ratio = 1.5,min_strike_ratio = 1.25))
+    test_result = rbind(test_result,option_chain_aggregator(test_chain,min_strike_ratio = 1.5))
+    if(is.null(new_chain)){
+      new_chain = test_result
+    }else{
+      new_chain = rbind(new_chain,test_result)
+    }
+  }
+  print(paste0(temp_ticker))
+}
+
+
+##Calculate moving average volume for options at each strike range and expiry date with 8 and 20 day window
+
+##Calculate moving average price for stock with 8 and 20 day window
+
+##Calculate moving average volume for stock with 8 and 20 day window
+
+
+
+```
+
+```{r aggregate all stock data}
+
+new_directory = "C:/Users/Andy/Downloads/Investing files/"
+
+# Change the working directory
+setwd(new_directory)
+
+# Print the current working directory to verify the change
+print(getwd())
+
+# Get list of option and stock files
+temp_files = list.files(getwd())
+temp_files = temp_files[grepl("stocks.cvs",temp_files)]
+# Merge all stock data into one dataframe
+full_df = NULL
+for(temp_file_i in 1:length(temp_files)){
+  temp_filename = temp_files[temp_file_i]
+  temp_date = str_replace(temp_filename,"stocks.cvs","")
+  temp_df = read.delim(temp_filename,header=TRUE,sep=",")
+  temp_df$stock_quote_date = temp_date
+  if(is.null(full_df)){
+    full_df = temp_df
+  }else{
+    full_df = rbind(full_df,temp_df)
+  }
+}
+
+# Get list of all stock dates
+temp_date_list = unique(full_df$stock_quote_date)
+
+# Iterate through each ticker and calculate initial SMA20, SMA8, SMV20, and SMV8 from the earliest available dates
+# Note the initial SMA20 and SMA8 as well as the earliest starting date for each ticker
+
+# Use the SMA and SMV values to calculate the EMA20, EMA8, EMV20, and EMV8 values for each ticker
+
+```
+
+```{r aggregate all option data}
+
+new_directory = "C:/Users/Andy/Downloads/Investing files/"
+
+# Change the working directory
+setwd(new_directory)
+
+# Print the current working directory to verify the change
+print(getwd())
+
+# Get list of option and stock files
+temp_files = list.files(getwd())
+temp_files = temp_files[grepl("options.cvs",temp_files)]
+# Merge all stock data into one dataframe
+full_df = NULL
+for(temp_file_i in 1:length(temp_files)){
+  temp_filename = temp_files[temp_file_i]
+  temp_date = str_replace(temp_filename,"options.cvs","")
+  temp_df = read.delim(temp_filename,header=TRUE,sep=",")
+  temp_df$option_quote_date = temp_date
+  if(is.null(full_df)){
+    full_df = temp_df
+  }else{
+    full_df = rbind(full_df,temp_df)
+  }
+}
+
+# Get list of all stock dates
+temp_date_list = unique(full_df$option_quote_date)
+
+# Iterate through each ticker and calculate initial SMA20, SMA8, SMV20, and SMV8 from the earliest available dates
+# Note the initial SMA20 and SMA8 as well as the earliest starting date for each ticker
+
+# Use the SMA and SMV values to calculate the EMA20, EMA8, EMV20, and EMV8 values for each ticker
+
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Ctrl+Alt+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Ctrl+Shift+K* to preview the HTML file).
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
