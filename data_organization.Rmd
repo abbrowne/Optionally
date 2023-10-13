@@ -22,6 +22,7 @@ library(purrr)
 library(stringr)
 library(RQuantLib)
 library(bizdays)
+library(parallel)
 ##Update below with dates for full range of interest
 load_quantlib_calendars("UnitedStates/NYSE",from="2000-01-01",to="2030-12-31")
 ##Custom functions
@@ -118,107 +119,6 @@ option_chain_aggregator = function(input_option_chain, min_strike_ratio=NA, max_
     temp_results[["option_put_mean_vega"]]=NA
     temp_results[["option_put_mean_implied_volatility"]]=NA
   }
-  #if(nrow(input_option_chain[input_option_chain$type == "call",]) > 0 & nrow(input_option_chain[input_option_chain$type == "put",]) > 0){
-  #  temp_results <- list("option_underlying_ticker"=input_ticker,
-  #                       "option_quote_date"=input_date,
-  #                       "option_underlying_open_close_avg"=input_avg_underlying,
-  #                       "option_strike_min"=min_strike_ratio*input_avg_underlying,
-  #                       "option_strike_max"=max_strike_ratio*input_avg_underlying,
-  #                       "option_strike_range"=input_strike_range,
-  #                       "option_expiry_range"=input_expiry_range,
-  #                       "option_style"=input_style,
-  #                       "option_total_call_listings"=nrow(input_option_chain[input_option_chain$type == "call",]),
-  #                       "option_total_put_listings"=nrow(input_option_chain[input_option_chain$type == "put",]),
-  #                       "option_call_total_volume"=sum(input_option_chain$volume[input_option_chain$type == "call"],na.rm = TRUE),
-  #                       "option_call_total_open_interest"=sum(input_option_chain$open_interest[input_option_chain$type == "call"],na.rm = TRUE),
-  #                       "option_call_mean_delta"=mean(input_option_chain$delta[input_option_chain$type == "call"],na.rm = TRUE),
-  #                       "option_call_mean_gamma"=mean(input_option_chain$gamma[input_option_chain$type == "call"],na.rm = TRUE),
-  #                       "option_call_mean_theta"=mean(input_option_chain$theta[input_option_chain$type == "call"],na.rm = TRUE),
-  #                       "option_call_mean_vega"=mean(input_option_chain$vega[input_option_chain$type == "call"],na.rm = TRUE),
-  #                       "option_call_mean_implied_volatility"=mean(input_option_chain$implied_volatility[input_option_chain$type == "call"],na.rm = TRUE),
-  #                       "option_put_total_volume"=sum(input_option_chain$volume[input_option_chain$type == "put"],na.rm = TRUE),
-  #                       "option_put_total_open_interest"=sum(input_option_chain$open_interest[input_option_chain$type == "put"],na.rm = TRUE),
-  #                       "option_put_mean_delta"=mean(input_option_chain$delta[input_option_chain$type == "put"],na.rm = TRUE),
-  #                       "option_put_mean_gamma"=mean(input_option_chain$gamma[input_option_chain$type == "put"],na.rm = TRUE),
-  #                       "option_put_mean_theta"=mean(input_option_chain$theta[input_option_chain$type == "put"],na.rm = TRUE),
-  #                       "option_put_mean_vega"=mean(input_option_chain$vega[input_option_chain$type == "put"],na.rm = TRUE),
-  #                       "option_put_mean_implied_volatility"=mean(input_option_chain$implied_volatility[input_option_chain$type == "put"],na.rm = TRUE))
-  #}else if(nrow(input_option_chain[input_option_chain$type == "call",]) > 0 & nrow(input_option_chain[input_option_chain$type == "put",]) == 0){
-  #  temp_results <- list("option_underlying_ticker"=input_ticker,
-  #                       "option_quote_date"=input_date,
-  #                       "option_underlying_open_close_avg"=input_avg_underlying,
-  #                       "option_strike_min"=min_strike_ratio*input_avg_underlying,
-  #                       "option_strike_max"=max_strike_ratio*input_avg_underlying,
-  #                       "option_strike_range"=input_strike_range,
-  #                       "option_expiry_range"=input_expiry_range,
-  #                       "option_style"=input_style,
-  #                       "option_total_call_listings"=nrow(input_option_chain[input_option_chain$type == "call",]),
-  #                       "option_total_put_listings"=0,
-  #                       "option_call_total_volume"=sum(input_option_chain$volume[input_option_chain$type == "call"],na.rm = TRUE),
-  #                       "option_call_total_open_interest"=sum(input_option_chain$open_interest[input_option_chain$type == "call"],na.rm = TRUE),
-  #                       "option_call_mean_delta"=mean(input_option_chain$delta[input_option_chain$type == "call"],na.rm = TRUE),
-  #                       "option_call_mean_gamma"=mean(input_option_chain$gamma[input_option_chain$type == "call"],na.rm = TRUE),
-  #                       "option_call_mean_theta"=mean(input_option_chain$theta[input_option_chain$type == "call"],na.rm = TRUE),
-  #                       "option_call_mean_vega"=mean(input_option_chain$vega[input_option_chain$type == "call"],na.rm = TRUE),
-  #                       "option_call_mean_implied_volatility"=mean(input_option_chain$implied_volatility[input_option_chain$type == "call"],na.rm = TRUE),
-  #                       "option_put_total_volume"=0,
-  #                       "option_put_total_open_interest"=0,
-  #                       "option_put_mean_delta"=NA,
-  #                       "option_put_mean_gamma"=NA,
-  #                       "option_put_mean_theta"=NA,
-  #                       "option_put_mean_vega"=NA,
-  #                       "option_put_mean_implied_volatility"=NA)
-  #}else if(nrow(input_option_chain[input_option_chain$type == "call",]) == 0 & nrow(input_option_chain[input_option_chain$type == "put",]) > 0){
-  #  temp_results <- list("option_underlying_ticker"=input_ticker,
-  #                       "option_quote_date"=input_date,
-  #                       "option_underlying_open_close_avg"=input_avg_underlying,
-  #                       "option_strike_min"=min_strike_ratio*input_avg_underlying,
-  #                       "option_strike_max"=max_strike_ratio*input_avg_underlying,
-  #                       "option_strike_range"=input_strike_range,
-  #                       "option_expiry_range"=input_expiry_range,
-  #                       "option_style"=input_style,
-  #                       "option_total_call_listings"=0,
-  #                       "option_total_put_listings"=nrow(input_option_chain[input_option_chain$type == "put",]),
-  #                       "option_call_total_volume"=0,
-  #                       "option_call_total_open_interest"=0,
-  #                       "option_call_mean_delta"=NA,
-  #                       "option_call_mean_gamma"=NA,
-  #                       "option_call_mean_theta"=NA,
-  #                       "option_call_mean_vega"=NA,
-  #                       "option_call_mean_implied_volatility"=NA,
-  #                       "option_put_total_volume"=sum(input_option_chain$volume[input_option_chain$type == "put"],na.rm = TRUE),
-  #                       "option_put_total_open_interest"=sum(input_option_chain$open_interest[input_option_chain$type == "put"],na.rm = TRUE),
-  #                       "option_put_mean_delta"=mean(input_option_chain$delta[input_option_chain$type == "put"],na.rm = TRUE),
-  #                       "option_put_mean_gamma"=mean(input_option_chain$gamma[input_option_chain$type == "put"],na.rm = TRUE),
-  #                       "option_put_mean_theta"=mean(input_option_chain$theta[input_option_chain$type == "put"],na.rm = TRUE),
-  #                       "option_put_mean_vega"=mean(input_option_chain$vega[input_option_chain$type == "put"],na.rm = TRUE),
-  #                       "option_put_mean_implied_volatility"=mean(input_option_chain$implied_volatility[input_option_chain$type == "put"],na.rm = TRUE))
-  #}else if(nrow(input_option_chain[input_option_chain$type == "call",]) == 0 & nrow(input_option_chain[input_option_chain$type == "put",]) == 0){
-  #  temp_results <- list("option_underlying_ticker"=input_ticker,
-  #                       "option_quote_date"=input_date,
-  #                       "option_underlying_open_close_avg"=input_avg_underlying,
-  #                       "option_strike_min"=min_strike_ratio*input_avg_underlying,
-  #                       "option_strike_max"=max_strike_ratio*input_avg_underlying,
-  #                       "option_strike_range"=input_strike_range,
-  #                       "option_expiry_range"=input_expiry_range,
-  #                       "option_style"=input_style,
-  #                       "option_total_call_listings"=0,
-  #                       "option_total_put_listings"=0,
-  #                       "option_call_total_volume"=0,
-  #                       "option_call_total_open_interest"=0,
-  #                       "option_call_mean_delta"=NA,
-  #                       "option_call_mean_gamma"=NA,
-  #                       "option_call_mean_theta"=NA,
-  #                       "option_call_mean_vega"=NA,
-  #                       "option_call_mean_implied_volatility"=NA,
-  #                       "option_put_total_volume"=0,
-  #                       "option_put_total_open_interest"=0,
-  #                       "option_put_mean_delta"=NA,
-  #                       "option_put_mean_gamma"=NA,
-  #                       "option_put_mean_theta"=NA,
-  #                       "option_put_mean_vega"=NA,
-  #                       "option_put_mean_implied_volatility"=NA)
-  #}
   temp_results <- as.data.frame(temp_results)
   return(temp_results)
 }
@@ -254,8 +154,9 @@ sp500_tickers = sp500_tickers[!is.na(sp500_tickers)]
 all_option_files = list.files('./option_files')
 all_stock_files = list.files('./stock_files')
 
-new_chain <- NULL
+timestamp()
 for(file_i in 1:length(all_option_files)){
+  new_chain <- NULL
   temp_option_file = all_option_files[file_i]
   temp_stock_file = str_replace(temp_option_file,"options","stocks")
   temp_date = str_replace(temp_option_file,"options.cvs","")
@@ -317,9 +218,12 @@ for(file_i in 1:length(all_option_files)){
     }
     if(temp_ticker_i%%100==0){
       print(paste0("Finished with ",temp_ticker_i," tickers for ",temp_date))
+      timestamp()
     }
   }
+  saveRDS(new_chain,paste0("aggregate_files/",temp_date,"aggregate.RDS"))
   print(paste0("Finished with ",temp_date))
+  timestamp()
 }
 
 ##Calculate moving average volume for options at each strike range and expiry date with 8 and 20 day window
