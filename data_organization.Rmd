@@ -7,32 +7,9 @@ This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute
 
 Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Ctrl+Shift+Enter*. 
 
-```{r load packages}
-
-#install.packages("haven")
-#install.packages("readxl")
-#install.packages("dplyr")
-#install.packages('purrr')
-#install.packages('RQuantLib')
-#install.packages('bizdays')
-library(readxl)
-library(dplyr)
-library(haven)
-library(purrr)
-library(stringr)
-library(RQuantLib)
-library(bizdays)
-library(parallel)
-##Update below with dates for full range of interest
-load_quantlib_calendars("UnitedStates/NYSE",from="2000-01-01",to="2030-12-31")
-##Custom functions
-
-# Create function to aggregate formatted option chain into designated groups
-
-```
-
 ```{r save all current and previous SP500 tickers}
 
+source("C:/Users/Andy/Downloads/Investing files/Investing_Project_Rstudio/finance_functions.R")
 new_directory = "C:/Users/Andy/Downloads/Investing files/"
 
 # Change the working directory
@@ -54,13 +31,52 @@ saveRDS(sp500_tickers,file="SP500_tickers.RDS")
 
 ```
 
+```{r aggregate all stock data}
+
+source("C:/Users/Andy/Downloads/Investing files/Investing_Project_Rstudio/finance_functions.R")
+new_directory = "C:/Users/Andy/Downloads/Investing files/stock_files/"
+
+# Change the working directory
+setwd(new_directory)
+
+# Print the current working directory to verify the change
+print(getwd())
+
+# Get list of option and stock files
+temp_files = list.files("C:/Users/Andy/Downloads/Investing files/stock_files/")
+temp_files = temp_files[grepl("stocks.cvs",temp_files)]
+# Merge all stock data into one dataframe
+full_df = NULL
+for(temp_file_i in 1:length(temp_files)){
+  temp_filename = temp_files[temp_file_i]
+  temp_date = str_replace(temp_filename,"stocks.cvs","")
+  temp_df = read.delim(temp_filename,header=TRUE,sep=",")
+  temp_df$stock_quote_date = temp_date
+  if(is.null(full_df)){
+    full_df = temp_df
+  }else{
+    full_df = rbind(full_df,temp_df)
+  }
+  print(paste0("Finished with ",temp_date))
+}
+saveRDS(full_df,file="C:/Users/Andy/Downloads/Investing files/stock_aggregate.RDS")
+# Get list of all stock dates
+temp_date_list = unique(full_df$stock_quote_date)
+
+# Iterate through each ticker and calculate initial SMA20, SMA8, SMV20, and SMV8 from the earliest available dates
+# Note the initial SMA20 and SMA8 as well as the earliest starting date for each ticker
+
+# Use the SMA and SMV values to calculate the EMA20, EMA8, EMV20, and EMV8 values for each ticker
+
+```
+
 ```{r explore options data and aggregation}
 
-source("C:/Users/Andy/Downloads/Investing files/finance_functions.R")
+source("C:/Users/Andy/Downloads/Investing files/Investing_Project_Rstudio/finance_functions.R")
 
 # Function to process a single file in parallel
 process_file <- function(file_i) {
-  source("C:/Users/Andy/Downloads/Investing files/finance_functions.R")
+  source("C:/Users/Andy/Downloads/Investing files/Investing_Project_Rstudio/finance_functions.R")
   new_directory = "C:/Users/Andy/Downloads/Investing files/"
   # Change the working directory
   setwd(new_directory)
@@ -105,27 +121,40 @@ process_file <- function(file_i) {
       test_chain <- filteredOptions[filteredOptions$underlying == temp_ticker, ]
       
       # Suggest starting with <10, 10-25, 25-50, 50-100, 100-200, 200-350, >350
-      min_strike_set <- c(NA, 0.5, 0.75, 0.9, 0.95, 1, 1.05, 1.1, 1.25, 1.5)
-      max_strike_set <- c(0.5, 0.75, 0.9, 0.95, 1, 1.05, 1.1, 1.25, 1.5, NA)
-      min_day_set <- c(NA, 10, 25, 50, 100, 200, 350)
-      max_day_set <- c(10, 25, 50, 100, 200, 350, NA)
-      
+      min_strike_set = c(NA, 0.5, 0.75, 0.9, 0.95, 1, 1.05, 1.1, 1.25, 1.5)
+      max_strike_set = c(0.5, 0.75, 0.9, 0.95, 1, 1.05, 1.1, 1.25, 1.5, NA)
+      min_day_set = c(NA, 10, 25, 50, 100, 200, 350)
+      max_day_set = c(10, 25, 50, 100, 200, 350, NA)
+      merge_chain = NULL
       for (temp_strike_i in 1:length(min_strike_set)) {
         for (temp_day_i in 1:length(min_day_set)) {
           # Aggregate over all strike ranges
-          test_result <- option_chain_aggregator(
+          test_result = option_chain_aggregator(
             test_chain,
             min_strike_ratio = min_strike_set[temp_strike_i],
             max_strike_ratio = max_strike_set[temp_strike_i],
             min_avg_days_to_expiry = min_day_set[temp_day_i],
             max_avg_days_to_expiry = max_day_set[temp_day_i]
           )
-          if (is.null(new_chain)) {
-            new_chain <- test_result
-          } else {
-            new_chain <- rbind(new_chain, test_result)
+          partial_chain = test_result[,c("option_underlying_ticker",
+                                        "option_quote_date",
+                                        "option_underlying_open_close_avg",
+                                        "option_style")]
+          add_chain = test_result[,!(colnames(test_result) %in% c(colnames(partial_chain),"option_strike_range","option_expiry_range"))]
+          colnames(add_chain) = paste0(colnames(add_chain),
+                                       "_strike_",str_replace_all(test_result$option_strike_range,"[ ]",""),
+                                       "_expiry_",str_replace_all(test_result$option_expiry_range,"[ ]",""))
+          if(temp_strike_i == 1 & temp_day_i == 1){
+            merge_chain = cbind(partial_chain,add_chain)
+          }else{
+            merge_chain = cbind(merge_chain,add_chain)
           }
         }
+      }
+      if(is.null(new_chain)){
+        new_chain = merge_chain
+      }else{
+        new_chain = rbind(new_chain,merge_chain)
       }
     }
     if (temp_ticker_i %% 100 == 0) {
@@ -134,7 +163,7 @@ process_file <- function(file_i) {
     }
   }
   
-  saveRDS(new_chain, paste0("aggregate_files/", temp_date, "aggregate.RDS"))
+  saveRDS(new_chain, paste0("new_aggregate_files/", temp_date, "aggregate.RDS"))
   print(paste0("Finished with ", temp_date))
   timestamp()
 }
@@ -167,161 +196,546 @@ stopCluster(cl)
 
 timestamp()
 
-#####
-
-timestamp()
-for(file_i in 1:length(all_option_files)){
-  new_chain <- NULL
-  temp_option_file = all_option_files[file_i]
-  temp_stock_file = str_replace(temp_option_file,"options","stocks")
-  temp_date = str_replace(temp_option_file,"options.cvs","")
-  
-  # Load options data
-  dfOptions = read.delim(paste0("option_files/",temp_option_file),header=TRUE,sep=",")
-
-  # Displaying the first few rows of the dataframe
-  head(dfOptions)
-
-  # Load stock data
-  dfStocks = read.delim(paste0("stock_files/",temp_stock_file),header=TRUE,sep=",")
-  head(dfStocks)
-
-  #Filter stocks to SP500 tickers
-  filteredStocks = dfStocks %>% 
-    filter(symbol %in% sp500_tickers)
-  #Filter options to SP500 tickers
-  filteredOptions = dfOptions %>% 
-    filter(underlying %in% sp500_tickers)
-  #Determine daily average from open and close values for each ticker
-  filteredStocks = filteredStocks %>% 
-    mutate(open_close_avg = (filteredStocks$open + filteredStocks$close)/2)
-
-  # Add stock openclose average to options df and ratio with strike price
-  filteredOptions$open_close_avg = NA
-  for(temp_i in 1:length(filteredStocks$symbol)){
-    temp_symbol = filteredStocks$symbol[temp_i]
-    filteredOptions$open_close_avg[filteredOptions$underlying == temp_symbol] = 
-      filteredStocks$open_close_avg[filteredStocks$symbol == temp_symbol]
-  }
-  filteredOptions$option_ratio = filteredOptions$strike / filteredOptions$open_close_avg
-  
-  for(temp_ticker_i in 1:length(sp500_tickers)){
-    temp_ticker = sp500_tickers[temp_ticker_i]
-    if(temp_ticker %in% filteredOptions$underlying){
-      test_chain = filteredOptions[filteredOptions$underlying == temp_ticker,]
-    
-      ##  Suggest starting with <10, 10-25, 25-50, 50-100, 100-200, 200-350, >350
-      min_strike_set = c(NA,0.5,0.75,0.9,0.95,1,1.05,1.1,1.25,1.5)
-      max_strike_set = c(0.5,0.75,0.9,0.95,1,1.05,1.1,1.25,1.5,NA)
-      min_day_set = c(NA,10,25,50,100,200,350)
-      max_day_set = c(10,25,50,100,200,350,NA)
-      for(temp_strike_i in 1:length(min_strike_set)){
-        for(temp_day_i in 1:length(min_day_set)){
-          ##Aggregate over all strike ranges
-          #min_avg_days_to_expiry=NA,max_avg_days_to_expiry=NA
-          test_result = option_chain_aggregator(test_chain,min_strike_ratio = min_strike_set[temp_strike_i],
-                                                max_strike_ratio = max_strike_set[temp_strike_i],
-                                                min_avg_days_to_expiry=min_day_set[temp_day_i],
-                                                max_avg_days_to_expiry=max_day_set[temp_day_i])
-          if(is.null(new_chain)){
-            new_chain = test_result
-          }else{
-            new_chain = rbind(new_chain,test_result)
-          }
-        }
-      }
+##Merge individual aggregate files
+setwd("C:/Users/Andy/Downloads/Investing files/new_aggregate_files/")
+aggregate_files <- list.files()
+full_aggregate = NULL
+for(temp_file_i in 1:length(aggregate_files)){
+    temp_aggregate = readRDS(aggregate_files[temp_file_i])
+    if(is.null(full_aggregate)){
+        full_aggregate = as.data.frame(temp_aggregate)
+    }else{
+        full_aggregate = rbind(full_aggregate,as.data.frame(temp_aggregate))
     }
-    if(temp_ticker_i%%100==0){
-      print(paste0("Finished with ",temp_ticker_i," tickers for ",temp_date))
-      timestamp()
-    }
-  }
-  saveRDS(new_chain,paste0("aggregate_files/",temp_date,"aggregate.RDS"))
-  print(paste0("Finished with ",temp_date))
-  timestamp()
+    print(paste0(temp_file_i))
 }
+saveRDS(full_aggregate,file="C:/Users/Andy/Downloads/Investing files/full_options_aggregate.RDS")
+
+#full_aggregate = readRDS("C:/Users/Andy/Downloads/Investing files/full_options_aggregate.RDS")
 
 ##Calculate moving average volume for options at each strike range and expiry date with 8 and 20 day window
 
-##Calculate moving average price for stock with 8 and 20 day window
+#Start by calculating simple moving average volume
 
-##Calculate moving average volume for stock with 8 and 20 day window
-  
-  
+#Create a list of dates that options first appear for each stock
+#first_20days = c("2013-01-02","2013-01-03","2013-01-04","2013-01-07","2013-01-08",
+#                 "2013-01-09","2013-01-10","2013-01-11","2013-01-14","2013-01-15",
+#                 "2013-01-16","2013-01-17","2013-01-18","2013-01-22","2013-01-23",
+#                 "2013-01-24","2013-01-25","2013-01-28","2013-01-29","2013-01-30")
+full_aggregate = full_aggregate[order(full_aggregate$option_underlying_ticker,full_aggregate$option_quote_date),]
+all_tickers = unique(full_aggregate$option_underlying_ticker)
+
+ticker_dates = list()
+for(temp_ticker_i in 1:length(all_tickers)){
+  temp_ticker = all_tickers[temp_ticker_i]
+  test_df = full_aggregate[full_aggregate$option_underlying_ticker == temp_ticker,]
+  temp_dates = unique(test_df$option_quote_date)
+  contract_sum = 0
+  temp_counter_i = 1
+  while(contract_sum == 0 & temp_counter_i <= length(temp_dates)){
+    sub_df = test_df[test_df$option_quote_date == temp_dates[temp_counter_i],]
+    contract_sum = sum(sub_df[,grepl("_listings_",colnames(sub_df))])
+    temp_counter_i = temp_counter_i + 1
+    if(contract_sum > 0){
+      temp_counter_i = temp_counter_i - 1
+    }
+  }
+  if(contract_sum > 0){
+    ticker_dates[[temp_ticker]] = temp_dates[temp_counter_i]
+  }else{
+    ticker_dates[[temp_ticker]] = NA
+  }
+  print(paste0("Finished with ",temp_ticker))
+}
+
+saveRDS(ticker_dates,file="C:/Users/Andy/Downloads/Investing files/SMA_options_ticker_dates.RDS")
+
+stocks_for_SMA = names(ticker_dates)[(ticker_dates == "2013-01-02")]
+all_dates = unique(full_aggregate$option_quote_date)
+
+#Calculate SMA8 and SMA20 for all call and put specific features
+sma_df = full_aggregate[full_aggregate$option_quote_date %in% all_dates[1:20],]
+all_sma20s = list()
+all_sma8s = list()
+for(temp_ticker_i in 1:length(stocks_for_SMA)){
+  temp_ticker = stocks_for_SMA[temp_ticker_i]
+  test_df = sma_df[sma_df$option_underlying_ticker == temp_ticker,]
+  #Calculate SMA20 values
+  sub_df = test_df[test_df$option_quote_date %in% all_dates[1:20],]
+  if(nrow(sub_df) == 20){
+    all_sma20s[[temp_ticker]] = colSums(sub_df[,!(colnames(sub_df) %in% c("option_underlying_ticker","option_quote_date","option_style"))],na.rm=TRUE) / 
+      colSums(!is.na(sub_df[,!(colnames(sub_df) %in% c("option_underlying_ticker","option_quote_date","option_style"))]))
+  }else{
+    print(paste0("Insufficient data for initial SMA20 calculation for ",temp_ticker))
+  }
+  sub_df = test_df[test_df$option_quote_date %in% all_dates[1:8],]
+  if(nrow(sub_df) == 8){
+    all_sma8s[[temp_ticker]] = colSums(sub_df[,!(colnames(sub_df) %in% c("option_underlying_ticker","option_quote_date","option_style"))],na.rm=TRUE) / 
+      colSums(!is.na(sub_df[,!(colnames(sub_df) %in% c("option_underlying_ticker","option_quote_date","option_style"))]))
+  }else{
+    print(paste0("Insufficient data for initial SMA8 calculation for ",temp_ticker))
+  }
+  print(paste0("Finished with ",temp_ticker))
+}
+all_sma20s = as.data.frame(t(as.data.frame(all_sma20s)))
+all_sma8s = as.data.frame(t(as.data.frame(all_sma8s)))
+all_sma20s$option_underlying_ticker = rownames(all_sma20s)
+all_sma20s$option_quote_date = "2013-01-14"
+all_sma8s$option_underlying_ticker = rownames(all_sma8s)
+all_sma8s$option_quote_date = "2013-01-31"
+
+saveRDS(all_sma20s,file="C:/Users/Andy/Downloads/Investing files/initial_option_SMA20s.RDS")
+saveRDS(all_sma8s,file="C:/Users/Andy/Downloads/Investing files/initial_option_SMA8s.RDS")
+
+#Calculate EMA8 and EMA20 for all following dates
+###Replaced with parallized code below
+#all_ema20s = all_sma20s[all_sma20s$option_quote_date == "1900-01-01",]
+#all_ema8s = all_sma8s[all_sma8s$option_quote_date == "1900-01-01",]
+#error_log = list()
+#timestamp()
+#for(temp_ticker_i in 1:length(stocks_for_SMA)){
+#  temp_errors = list()
+#  temp_ticker = stocks_for_SMA[temp_ticker_i]
+#  test_df = full_aggregate[full_aggregate$option_underlying_ticker == temp_ticker,]
+#  dates_to_run = all_dates[9:length(all_dates)]
+#  for(temp_date_i in 1:length(dates_to_run)){
+#    temp_date = dates_to_run[temp_date_i]
+#    sub_df = test_df[test_df$option_quote_date == temp_date,!(colnames(test_df) %in% c("option_underlying_ticker","option_quote_date","option_style"))]
+#    if(nrow(sub_df) == 1){
+#      if(temp_date == all_dates[9]){
+#        temp_sma8 = all_sma8s[rownames(all_sma8s) == temp_ticker,
+#                              !(colnames(all_sma8s) %in% c("option_underlying_ticker","option_quote_date"))]
+#      }else{
+#        temp_sma8 = all_ema8s[all_ema8s$option_underlying_ticker == temp_ticker & 
+#                                all_ema8s$option_quote_date == dates_to_run[temp_date_i-1],
+#                              !(colnames(all_ema8s) %in% c("option_underlying_ticker","option_quote_date"))]
+#      }
+#      if(nrow(temp_sma8) == 1){
+#        temp_ema8 = (sub_df) * (2/9) + (temp_sma8) * (1 - (2/9))
+#        temp_ema8$option_underlying_ticker = temp_ticker
+#        temp_ema8$option_quote_date = temp_date
+#        all_ema8s = rbind(all_ema8s,temp_ema8)
+#      }else{
+#        print(paste0("Error: No prior SMA8/EMA8 for ", temp_ticker, " for ", temp_date))
+#        temp_errors = c(temp_errors,paste0("Error: No SMA8 for ", temp_ticker, " for ", temp_date))
+#      }
+#      if(temp_date %in% all_dates[21:length(all_dates)]){
+#        if(temp_date == all_dates[21]){
+#          temp_sma20 = all_sma20s[rownames(all_sma20s) == temp_ticker,
+#                              !(colnames(all_sma20s) %in% c("option_underlying_ticker","option_quote_date"))]
+#        }else{
+#          temp_sma20 = all_ema20s[all_ema20s$option_underlying_ticker == temp_ticker & 
+#                                  all_ema20s$option_quote_date == dates_to_run[temp_date_i-1],
+#                                !(colnames(all_ema20s) %in% c("option_underlying_ticker","option_quote_date"))]
+#        }
+#        if(nrow(temp_sma20) == 1){
+#          temp_ema20 = (sub_df) * (2/21) + (temp_sma20) * (1 - (2/21))
+#          temp_ema20$option_underlying_ticker = temp_ticker
+#          temp_ema20$option_quote_date = temp_date
+#          all_ema20s = rbind(all_ema20s,temp_ema20)
+#        }else{
+#          print(paste0("Error: No prior SMA20/EMA20 for ", temp_ticker, " for ", temp_date))
+#          temp_errors = c(temp_errors,paste0("Error: No prior SMA20/EMA20 for ", temp_ticker, " for ", temp_date))
+#        }
+#      }
+#    }else{
+#      print(paste0("Error: No new data for EMA calculation for ", temp_ticker, " for ", temp_date))
+#      temp_errors = c(temp_errors,paste0("Error: No new data for EMA calculation for ", temp_ticker, " for ", temp_date))
+#      break
+#    }
+#  }
+#  error_log[[temp_ticker]] = temp_errors
+#  print(paste0("Finished with ",temp_ticker))
+#  timestamp()
+#}
+
+###
+
+# Install and load the required packages if not already installed
+# install.packages("foreach")
+# install.packages("doParallel")
+library(foreach)
+library(doParallel)
+
+full_aggregate = readRDS("C:/Users/Andy/Downloads/Investing files/full_options_aggregate.RDS")
+full_aggregate = full_aggregate[order(full_aggregate$option_underlying_ticker,full_aggregate$option_quote_date),]
+ticker_dates = readRDS("C:/Users/Andy/Downloads/Investing files/SMA_options_ticker_dates.RDS")
+stocks_for_SMA = names(ticker_dates)[(ticker_dates == "2013-01-02")]
+all_dates = unique(full_aggregate$option_quote_date)
+all_sma20s = readRDS("C:/Users/Andy/Downloads/Investing files/initial_option_SMA20s.RDS")
+all_sma8s = readRDS("C:/Users/Andy/Downloads/Investing files/initial_option_SMA8s.RDS")
+
+
+# Set the number of CPU cores/threads to use
+num_cores <- detectCores()  # Adjust this number as needed
+
+# Initialize a parallel backend
+cl <- makeCluster(num_cores, outfile="C:/Users/Andy/Downloads/Investing files/ema_option_log.txt")
+registerDoParallel(cl)
+
+# Calculate EMA8 and EMA20 for all following dates in parallel
+all_ema20s <- all_sma20s[all_sma20s$option_quote_date == "1900-01-01",]
+all_ema8s <- all_sma8s[all_sma8s$option_quote_date == "1900-01-01",]
+error_log <- list()
+timestamp()
+
+# Create a function for the parallelized work
+calculate_ema <- function(full_aggregate,temp_ticker,all_dates,all_sma8s,all_sma20s) {
+  temp_errors = list()
+  temp_ema8s = all_sma8s[all_sma8s$option_quote_date == "1900-01-01",]
+  temp_ema20s = all_sma20s[all_sma20s$option_quote_date == "1900-01-01",]
+  test_df <- full_aggregate[full_aggregate$option_underlying_ticker == temp_ticker,]
+  dates_to_run <- all_dates[9:length(all_dates)]
+
+  for (temp_date_i in 1:length(dates_to_run)) {
+    temp_date <- dates_to_run[temp_date_i]
+    sub_df <- test_df[test_df$option_quote_date == temp_date, !(colnames(test_df) %in% c("option_underlying_ticker","option_quote_date","option_style"))]
+
+    if (nrow(sub_df) == 1) {
+      if (temp_date == all_dates[9]) {
+        temp_sma8 <- all_sma8s[rownames(all_sma8s) == temp_ticker, !(colnames(all_sma8s) %in% c("option_underlying_ticker","option_quote_date"))]
+      } else {
+        temp_sma8 <- temp_ema8s[temp_ema8s$option_underlying_ticker == temp_ticker & temp_ema8s$option_quote_date == dates_to_run[temp_date_i-1], 
+                                !(colnames(temp_ema8s) %in% c("option_underlying_ticker","option_quote_date"))]
+      }
+
+      if (nrow(temp_sma8) == 1) {
+        temp_ema8 <- (sub_df) * (2/9) + (temp_sma8) * (1 - (2/9))
+        temp_ema8$option_underlying_ticker <- temp_ticker
+        temp_ema8$option_quote_date <- temp_date
+        temp_ema8s <- rbind(temp_ema8s, temp_ema8)
+      } else {
+        print(paste0("Error: No prior SMA8/EMA8 for ", temp_ticker, " for ", temp_date))
+        temp_errors <- c(temp_errors, paste0("Error: No SMA8 for ", temp_ticker, " for ", temp_date))
+      }
+
+      if (temp_date %in% all_dates[21:length(all_dates)]) {
+        if (temp_date == all_dates[21]) {
+          temp_sma20 <- all_sma20s[rownames(all_sma20s) == temp_ticker, !(colnames(all_sma20s) %in% c("option_underlying_ticker","option_quote_date"))]
+        } else {
+          temp_sma20 <- temp_ema20s[temp_ema20s$option_underlying_ticker == temp_ticker & temp_ema20s$option_quote_date == dates_to_run[temp_date_i-1], 
+                                    !(colnames(temp_ema20s) %in% c("option_underlying_ticker","option_quote_date"))]
+        }
+
+        if (nrow(temp_sma20) == 1) {
+          temp_ema20 <- (sub_df) * (2/21) + (temp_sma20) * (1 - (2/21))
+          temp_ema20$option_underlying_ticker <- temp_ticker
+          temp_ema20$option_quote_date <- temp_date
+          temp_ema20s <- rbind(temp_ema20s, temp_ema20)
+        } else {
+          print(paste0("Error: No prior SMA20/EMA20 for ", temp_ticker, " for ", temp_date))
+          temp_errors <- c(temp_errors, paste0("Error: No prior SMA20/EMA20 for ", temp_ticker, " for ", temp_date))
+        }
+      }
+    } else {
+      print(paste0("Error: No new data for EMA calculation for ", temp_ticker, " for ", temp_date))
+      temp_errors <- c(temp_errors, paste0("Error: No new data for EMA calculation for ", temp_ticker, " for ", temp_date))
+      break
+    }
+  }
+  temp_result = list(ticker=temp_ticker, errors = temp_errors, ema20s=temp_ema20s, ema8s=temp_ema8s)
+  timestamp()
+  print(paste0("Finished with ",temp_ticker))
+  return(temp_result)
+}
+
+# Use foreach to parallelize the calculations
+timestamp()
+results <- foreach(temp_ticker = stocks_for_SMA, .packages = c("dplyr")) %dopar% {
+  calculate_ema(full_aggregate,temp_ticker,all_dates,all_sma8s,all_sma20s)
+}
+
+# Close the parallel backend
+stopCluster(cl)
+
+# Collect and process the results
+test = results
+for (temp_result_i in 1:length(test)) {
+  if(temp_result_i == 1){
+    all_ema20s = test[[temp_result_i]]$ema20s
+    all_ema8s = test[[temp_result_i]]$ema8s
+  }else{
+    all_ema20s = rbind(all_ema20s,test[[temp_result_i]]$ema20s)
+    all_ema8s = rbind(all_ema8s,test[[temp_result_i]]$ema8s)
+  }
+  temp_ticker = test[[temp_result_i]]$ticker
+  temp_error = test[[temp_result_i]]$errors
+  error_log[[temp_ticker]] <- temp_error
+  print(paste0("Finished with ", temp_ticker))
+  timestamp()
+}
+
+saveRDS(all_ema8s,file="C:/Users/Andy/Downloads/Investing files/all_option_ema8s.RDS")
+saveRDS(all_ema20s,file="C:/Users/Andy/Downloads/Investing files/all_option_ema20s.RDS")
+
+# Print error log if needed
+print("Error Log:")
+print(error_log)
+
+###
+
+##Calculate moving average price and volume for stock with 8 and 20 day window
+stock_aggregate = readRDS("C:/Users/Andy/Downloads/Investing files/stock_aggregate.RDS")
+stock_aggregate = stock_aggregate[order(stock_aggregate$symbol,stock_aggregate$stock_quote_date),]
+stock_aggregate$avg_open_close = ((stock_aggregate$open + stock_aggregate$close) / 2)
+ticker_dates = readRDS("C:/Users/Andy/Downloads/Investing files/SMA_options_ticker_dates.RDS")
+stocks_for_SMA = names(ticker_dates)[(ticker_dates == "2013-01-02")]
+all_dates = unique(stock_aggregate$stock_quote_date)
+
+#Calculate SMA8 and SMA20 for all call and put specific features
+sma_df = stock_aggregate[stock_aggregate$stock_quote_date %in% all_dates[1:20],]
+all_sma20s = list()
+all_sma8s = list()
+for(temp_ticker_i in 1:length(stocks_for_SMA)){
+  temp_ticker = stocks_for_SMA[temp_ticker_i]
+  test_df = sma_df[sma_df$symbol == temp_ticker,]
+  #Calculate SMA20 values
+  sub_df = test_df[test_df$stock_quote_date %in% all_dates[1:20],]
+  if(nrow(sub_df) == 20){
+    all_sma20s[[temp_ticker]] = colSums(sub_df[,!(colnames(sub_df) %in% c("symbol","stock_quote_date","adjust_close"))],na.rm=TRUE) / 
+      colSums(!is.na(sub_df[,!(colnames(sub_df) %in% c("symbol","stock_quote_date","adjust_close"))]))
+  }else{
+    print(paste0("Insufficient data for initial SMA20 calculation for ",temp_ticker))
+  }
+  sub_df = test_df[test_df$stock_quote_date %in% all_dates[1:8],]
+  if(nrow(sub_df) == 8){
+    all_sma8s[[temp_ticker]] = colSums(sub_df[,!(colnames(sub_df) %in% c("symbol","stock_quote_date","adjust_close"))],na.rm=TRUE) / 
+      colSums(!is.na(sub_df[,!(colnames(sub_df) %in% c("symbol","stock_quote_date","adjust_close"))]))
+  }else{
+    print(paste0("Insufficient data for initial SMA8 calculation for ",temp_ticker))
+  }
+  print(paste0("Finished with ",temp_ticker))
+}
+all_sma20s = as.data.frame(t(as.data.frame(all_sma20s)))
+all_sma8s = as.data.frame(t(as.data.frame(all_sma8s)))
+all_sma20s$symbol = rownames(all_sma20s)
+all_sma20s$stock_quote_date = "2013-01-14"
+all_sma8s$symbol = rownames(all_sma8s)
+all_sma8s$stock_quote_date = "2013-01-31"
+
+saveRDS(all_sma20s,file="C:/Users/Andy/Downloads/Investing files/initial_stock_SMA20s.RDS")
+saveRDS(all_sma8s,file="C:/Users/Andy/Downloads/Investing files/initial_stock_SMA8s.RDS")
+
+##
+
+library(foreach)
+library(doParallel)
+
+stock_aggregate = readRDS("C:/Users/Andy/Downloads/Investing files/stock_aggregate.RDS")
+stock_aggregate = stock_aggregate[order(stock_aggregate$symbol,stock_aggregate$stock_quote_date),]
+stock_aggregate$avg_open_close = ((stock_aggregate$open + stock_aggregate$close) / 2)
+ticker_dates = readRDS("C:/Users/Andy/Downloads/Investing files/SMA_options_ticker_dates.RDS")
+stocks_for_SMA = names(ticker_dates)[(ticker_dates == "2013-01-02")]
+all_dates = unique(stock_aggregate$stock_quote_date)
+all_sma20s = readRDS("C:/Users/Andy/Downloads/Investing files/initial_stock_SMA20s.RDS")
+all_sma8s = readRDS("C:/Users/Andy/Downloads/Investing files/initial_stock_SMA8s.RDS")
+
+
+# Set the number of CPU cores/threads to use
+num_cores <- detectCores()  # Adjust this number as needed
+
+# Initialize a parallel backend
+cl <- makeCluster(num_cores, outfile="C:/Users/Andy/Downloads/Investing files/ema_stock_log.txt")
+registerDoParallel(cl)
+
+# Calculate EMA8 and EMA20 for all following dates in parallel
+all_ema20s <- all_sma20s[all_sma20s$stock_quote_date == "1900-01-01",]
+all_ema8s <- all_sma8s[all_sma8s$stock_quote_date == "1900-01-01",]
+error_log <- list()
+timestamp()
+
+# Create a function for the parallelized work
+calculate_stock_ema <- function(stock_aggregate,temp_ticker,all_dates,all_sma8s,all_sma20s) {
+  temp_errors = list()
+  temp_ema8s = all_sma8s[all_sma8s$stock_quote_date == "1900-01-01",]
+  temp_ema20s = all_sma20s[all_sma20s$stock_quote_date == "1900-01-01",]
+  test_df <- stock_aggregate[stock_aggregate$symbol == temp_ticker,]
+  dates_to_run <- all_dates[9:length(all_dates)]
+
+  for (temp_date_i in 1:length(dates_to_run)) {
+    temp_date <- dates_to_run[temp_date_i]
+    sub_df <- test_df[test_df$stock_quote_date == temp_date, !(colnames(test_df) %in% c("symbol","stock_quote_date","adjust_close"))]
+
+    if (nrow(sub_df) == 1) {
+      if (temp_date == all_dates[9]) {
+        temp_sma8 <- all_sma8s[rownames(all_sma8s) == temp_ticker, !(colnames(all_sma8s) %in% c("symbol","stock_quote_date"))]
+      } else {
+        temp_sma8 <- temp_ema8s[temp_ema8s$symbol == temp_ticker & temp_ema8s$stock_quote_date == dates_to_run[temp_date_i-1], 
+                                !(colnames(temp_ema8s) %in% c("symbol","stock_quote_date"))]
+      }
+
+      if (nrow(temp_sma8) == 1) {
+        temp_ema8 <- (sub_df) * (2/9) + (temp_sma8) * (1 - (2/9))
+        temp_ema8$symbol <- temp_ticker
+        temp_ema8$stock_quote_date <- temp_date
+        temp_ema8s <- rbind(temp_ema8s, temp_ema8)
+      } else {
+        print(paste0("Error: No prior SMA8/EMA8 for ", temp_ticker, " for ", temp_date))
+        temp_errors <- c(temp_errors, paste0("Error: No SMA8 for ", temp_ticker, " for ", temp_date))
+      }
+
+      if (temp_date %in% all_dates[21:length(all_dates)]) {
+        if (temp_date == all_dates[21]) {
+          temp_sma20 <- all_sma20s[rownames(all_sma20s) == temp_ticker, !(colnames(all_sma20s) %in% c("symbol","stock_quote_date"))]
+        } else {
+          temp_sma20 <- temp_ema20s[temp_ema20s$symbol == temp_ticker & temp_ema20s$stock_quote_date == dates_to_run[temp_date_i-1], 
+                                    !(colnames(temp_ema20s) %in% c("symbol","stock_quote_date"))]
+        }
+
+        if (nrow(temp_sma20) == 1) {
+          temp_ema20 <- (sub_df) * (2/21) + (temp_sma20) * (1 - (2/21))
+          temp_ema20$symbol <- temp_ticker
+          temp_ema20$stock_quote_date <- temp_date
+          temp_ema20s <- rbind(temp_ema20s, temp_ema20)
+        } else {
+          print(paste0("Error: No prior SMA20/EMA20 for ", temp_ticker, " for ", temp_date))
+          temp_errors <- c(temp_errors, paste0("Error: No prior SMA20/EMA20 for ", temp_ticker, " for ", temp_date))
+        }
+      }
+    } else {
+      print(paste0("Error: No new data for EMA calculation for ", temp_ticker, " for ", temp_date))
+      temp_errors <- c(temp_errors, paste0("Error: No new data for EMA calculation for ", temp_ticker, " for ", temp_date))
+      break
+    }
+  }
+  temp_result = list(ticker=temp_ticker, errors = temp_errors, ema20s=temp_ema20s, ema8s=temp_ema8s)
+  timestamp()
+  print(paste0("Finished with ",temp_ticker))
+  return(temp_result)
+}
+
+# Use foreach to parallelize the calculations
+timestamp()
+results <- foreach(temp_ticker = stocks_for_SMA, .packages = c("dplyr")) %dopar% {
+  calculate_stock_ema(stock_aggregate,temp_ticker,all_dates,all_sma8s,all_sma20s)
+}
+
+# Close the parallel backend
+stopCluster(cl)
+
+# Collect and process the results
+test = results
+for (temp_result_i in 1:length(test)) {
+  if(temp_result_i == 1){
+    all_ema20s = test[[temp_result_i]]$ema20s
+    all_ema8s = test[[temp_result_i]]$ema8s
+  }else{
+    all_ema20s = rbind(all_ema20s,test[[temp_result_i]]$ema20s)
+    all_ema8s = rbind(all_ema8s,test[[temp_result_i]]$ema8s)
+  }
+  temp_ticker = test[[temp_result_i]]$ticker
+  temp_error = test[[temp_result_i]]$errors
+  error_log[[temp_ticker]] <- temp_error
+  print(paste0("Finished with ", temp_ticker))
+  timestamp()
+}
+
+saveRDS(all_ema8s,file="C:/Users/Andy/Downloads/Investing files/all_stock_ema8s.RDS")
+saveRDS(all_ema20s,file="C:/Users/Andy/Downloads/Investing files/all_stock_ema20s.RDS")
+
+# Print error log if needed
+print("Error Log:")
+print(error_log)
+
+
+##
+
+##Remove stocks with errors or splits during the 6 month test data window
+
+##Create outcome tables
+stock_aggregate = readRDS("C:/Users/Andy/Downloads/Investing files/stock_aggregate.RDS")
+stock_aggregate = stock_aggregate[order(stock_aggregate$symbol,stock_aggregate$stock_quote_date),]
+stock_aggregate$avg_open_close = ((stock_aggregate$open + stock_aggregate$close) / 2)
+ticker_dates = readRDS("C:/Users/Andy/Downloads/Investing files/SMA_options_ticker_dates.RDS")
+stocks_for_SMA = names(ticker_dates)[(ticker_dates == "2013-01-02")]
+all_dates = unique(stock_aggregate$stock_quote_date)
+
+full_outcomes = NULL
+input_aggregate = stock_aggregate[stock_aggregate$symbol %in% stocks_for_SMA,]
+for(temp_date_i in 1:length(all_dates)){
+  temp_aggregate = input_aggregate[input_aggregate$stock_quote_date == all_dates[temp_date_i],]
+  rownames(temp_aggregate) = temp_aggregate$symbol
+  temp_result = temp_aggregate[,c("symbol","stock_quote_date")]
+  for(temp_counter_i in 1:10){
+    if((temp_date_i+temp_counter_i) < length(all_dates)){
+      comp_aggregate = input_aggregate[input_aggregate$stock_quote_date == all_dates[temp_date_i+temp_counter_i],]
+      rownames(comp_aggregate) = comp_aggregate$symbol
+      temp_result[,paste0("time",temp_counter_i,"_increase2")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"avg_open_close"] >= 1.02*temp_aggregate$avg_open_close)
+      temp_result[,paste0("time",temp_counter_i,"_increase5")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"avg_open_close"] >= 1.05*temp_aggregate$avg_open_close)
+      temp_result[,paste0("time",temp_counter_i,"_increase10")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"avg_open_close"] >= 1.1*temp_aggregate$avg_open_close)
+      temp_result[,paste0("time",temp_counter_i,"_increase20")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"avg_open_close"] >= 1.2*temp_aggregate$avg_open_close)
+      temp_result[,paste0("time",temp_counter_i,"_increase50")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"avg_open_close"] >= 1.5*temp_aggregate$avg_open_close)
+      temp_result[,paste0("time",temp_counter_i,"_decrease2")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"avg_open_close"] <= 0.98*temp_aggregate$avg_open_close)
+      temp_result[,paste0("time",temp_counter_i,"_decrease5")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"avg_open_close"] <= 0.95*temp_aggregate$avg_open_close)
+      temp_result[,paste0("time",temp_counter_i,"_decrease10")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"avg_open_close"] <= 0.9*temp_aggregate$avg_open_close)
+      temp_result[,paste0("time",temp_counter_i,"_decrease20")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"avg_open_close"] <= 0.8*temp_aggregate$avg_open_close)
+      temp_result[,paste0("time",temp_counter_i,"_decrease50")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"avg_open_close"] <= 0.5*temp_aggregate$avg_open_close)
+    }else{
+      temp_result[,paste0("time",temp_counter_i,"_increase2")] = NA
+      temp_result[,paste0("time",temp_counter_i,"_increase5")] = NA
+      temp_result[,paste0("time",temp_counter_i,"_increase10")] = NA
+      temp_result[,paste0("time",temp_counter_i,"_increase20")] = NA
+      temp_result[,paste0("time",temp_counter_i,"_increase50")] = NA
+      temp_result[,paste0("time",temp_counter_i,"_decrease2")] = NA
+      temp_result[,paste0("time",temp_counter_i,"_decrease5")] = NA
+      temp_result[,paste0("time",temp_counter_i,"_decrease10")] = NA
+      temp_result[,paste0("time",temp_counter_i,"_decrease20")] = NA
+      temp_result[,paste0("time",temp_counter_i,"_decrease50")] = NA
+    }
+  }
+  if(is.null(full_outcomes)){
+    full_outcomes = temp_result
+  }else{
+    full_outcomes = rbind(full_outcomes,temp_result)
+  }
+  print(paste0("Finished with day ",temp_date_i))
+}
+saveRDS(full_outcomes,file="C:/Users/Andy/Downloads/Investing files/full_outcomes.RDS")
+
+##Subset to option EMA volume + open interest and stock EMA price (divided by day avg_open_close?) + volume + absolute_stock_avg_open_close
+##Add in day values for options and stocks
+
+##Save and test predictive utility
   
 ```
 
-```{r aggregate all stock data}
+```{r get stock splits}
 
-new_directory = "C:/Users/Andy/Downloads/Investing files/"
+#install.packages("quantmod")
 
-# Change the working directory
-setwd(new_directory)
+library(quantmod)
 
-# Print the current working directory to verify the change
-print(getwd())
-
-# Get list of option and stock files
-temp_files = list.files(getwd())
-temp_files = temp_files[grepl("stocks.cvs",temp_files)]
-# Merge all stock data into one dataframe
-full_df = NULL
-for(temp_file_i in 1:length(temp_files)){
-  temp_filename = temp_files[temp_file_i]
-  temp_date = str_replace(temp_filename,"stocks.cvs","")
-  temp_df = read.delim(temp_filename,header=TRUE,sep=",")
-  temp_df$stock_quote_date = temp_date
-  if(is.null(full_df)){
-    full_df = temp_df
-  }else{
-    full_df = rbind(full_df,temp_df)
+stock_aggregate = readRDS("C:/Users/Andy/Downloads/Investing files/stock_aggregate.RDS")
+stock_aggregate = stock_aggregate[order(stock_aggregate$symbol,stock_aggregate$stock_quote_date),]
+stock_aggregate$avg_open_close = ((stock_aggregate$open + stock_aggregate$close) / 2)
+ticker_dates = readRDS("C:/Users/Andy/Downloads/Investing files/SMA_options_ticker_dates.RDS")
+stocks_for_SMA = names(ticker_dates)[(ticker_dates == "2013-01-02")]
+all_dates = unique(stock_aggregate$stock_quote_date)
+stocks_to_drop = c("ADS","AGN","AKS","ALXN","APC","AVP",
+                   "BBBY","BRK.B","CELG","CERN","COG","CTXS","CXO",
+                   "DF","DISCK","DLPH","DNR","DRE","DTV","ENDP","ESV","ETFC",
+                   "FB","FBHS","FII","FLIR","FRC","FRX","FTR","GRA","HFC","HRS",
+                   "JCP","JEC","KSU","LLL","LM","LSI","MON","MXIM",
+                   "NBL","NLSN","NYX","PBCT","QEP","RDC","RE","RHT","RRD","RTN",
+                   "SIVB","STI","TIF","TSS","VAR","VIAB","WCG","WIN","WPX","XEC","XL","XLNX","YHOO")
+all_splits = NULL
+for(temp_ticker_i in 1:length(stocks_for_SMA)){
+  temp_ticker = stocks_for_SMA[temp_ticker_i]
+  if(!(temp_ticker %in% stocks_to_drop)){
+    splits <- getSplits(temp_ticker)
+    temp_splits = as.data.frame(list(ticker=c(rep(temp_ticker,length(index(splits)))),date=c(index(splits))))
+    if(is.null(all_splits)){
+      all_splits = temp_splits
+    }else{
+      all_splits = rbind(all_splits,temp_splits)
+    }
   }
 }
-
-# Get list of all stock dates
-temp_date_list = unique(full_df$stock_quote_date)
-
-# Iterate through each ticker and calculate initial SMA20, SMA8, SMV20, and SMV8 from the earliest available dates
-# Note the initial SMA20 and SMA8 as well as the earliest starting date for each ticker
-
-# Use the SMA and SMV values to calculate the EMA20, EMA8, EMV20, and EMV8 values for each ticker
+saveRDS(all_splits,file="C:/Users/Andy/Downloads/Investing files/all_splits.RDS")
 
 ```
 
-```{r aggregate all option data}
-
-new_directory = "C:/Users/Andy/Downloads/Investing files/"
-
-# Change the working directory
-setwd(new_directory)
-
-# Print the current working directory to verify the change
-print(getwd())
-
-# Get list of option and stock files
-temp_files = list.files(getwd())
-temp_files = temp_files[grepl("options.cvs",temp_files)]
-# Merge all stock data into one dataframe
-full_df = NULL
-for(temp_file_i in 1:length(temp_files)){
-  temp_filename = temp_files[temp_file_i]
-  temp_date = str_replace(temp_filename,"options.cvs","")
-  temp_df = read.delim(temp_filename,header=TRUE,sep=",")
-  temp_df$option_quote_date = temp_date
-  if(is.null(full_df)){
-    full_df = temp_df
-  }else{
-    full_df = rbind(full_df,temp_df)
-  }
-}
-
-# Get list of all stock dates
-temp_date_list = unique(full_df$option_quote_date)
-
-# Iterate through each ticker and calculate initial SMA20, SMA8, SMV20, and SMV8 from the earliest available dates
-# Note the initial SMA20 and SMA8 as well as the earliest starting date for each ticker
-
-# Use the SMA and SMV values to calculate the EMA20, EMA8, EMV20, and EMV8 values for each ticker
+```{r run exploratory predictions}
 
 ```
 

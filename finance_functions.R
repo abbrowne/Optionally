@@ -57,11 +57,9 @@ option_chain_aggregator = function(input_option_chain, min_strike_ratio=NA, max_
   temp_results <- list("option_underlying_ticker"=input_ticker,
                        "option_quote_date"=input_date,
                        "option_underlying_open_close_avg"=input_avg_underlying,
-                       "option_strike_min"=min_strike_ratio*input_avg_underlying,
-                       "option_strike_max"=max_strike_ratio*input_avg_underlying,
+                       "option_style"=input_style,
                        "option_strike_range"=input_strike_range,
-                       "option_expiry_range"=input_expiry_range,
-                       "option_style"=input_style)
+                       "option_expiry_range"=input_expiry_range)
   
   if(nrow(input_option_chain[input_option_chain$type == "call",]) > 0){
     temp_results[["option_total_call_listings"]]=nrow(input_option_chain[input_option_chain$type == "call",])
