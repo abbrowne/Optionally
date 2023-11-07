@@ -804,6 +804,8 @@ stock_aggregate = readRDS("C:/Users/Andy/Downloads/Investing files/stock_aggrega
 stock_aggregate = stock_aggregate[order(stock_aggregate$symbol,stock_aggregate$stock_quote_date),]
 stock_aggregate$avg_open_close = ((stock_aggregate$open + stock_aggregate$close) / 2)
 stock_aggregate = stock_aggregate[stock_aggregate$symbol %in% stocks_for_SMA,]
+all_outcomes = readRDS("C:/Users/Andy/Downloads/Investing files/full_outcomes.RDS")
+rownames(all_outcomes) = paste0(all_outcomes$symbol,"_",all_outcomes$stock_quote_date)
 
 temp_option_agg = full_aggregate[,grepl("_listings_",colnames(full_aggregate)) | grepl("_total_volume_",colnames(full_aggregate)) | 
                                    grepl("_open_interest_",colnames(full_aggregate)) | grepl("option_underlying_ticker",colnames(full_aggregate)) | 
@@ -812,25 +814,97 @@ rownames(temp_option_agg) = paste0(temp_option_agg$option_underlying_ticker,"_",
 temp_option_ema20s = all_option_ema20s[,grepl("_listings_",colnames(all_option_ema20s)) | grepl("_total_volume_",colnames(all_option_ema20s)) | 
                                    grepl("_open_interest_",colnames(all_option_ema20s)) | grepl("option_underlying_ticker",colnames(all_option_ema20s)) | 
                                    grepl("option_quote_date",colnames(all_option_ema20s))]
+colnames(temp_option_ema20s) = paste0(colnames(temp_option_ema20s),"_ema20")
 rownames(temp_option_ema20s) = paste0(temp_option_ema20s$option_underlying_ticker,"_",temp_option_ema20s$option_quote_date)
 temp_option_ema8s = all_option_ema20s[,grepl("_listings_",colnames(all_option_ema8s)) | grepl("_total_volume_",colnames(all_option_ema8s)) | 
                                    grepl("_open_interest_",colnames(all_option_ema8s)) | grepl("option_underlying_ticker",colnames(all_option_ema8s)) | 
                                    grepl("option_quote_date",colnames(all_option_ema8s))]
+colnames(temp_option_ema8s) = paste0(colnames(temp_option_ema8s),"_ema8")
 rownames(temp_option_ema8s) = paste0(temp_option_ema8s$option_underlying_ticker,"_",temp_option_ema8s$option_quote_date)
 
 temp_stock_agg = stock_aggregate[,c("symbol","stock_quote_date","volume","avg_open_close")]
 rownames(temp_stock_agg) = paste0(temp_stock_agg$symbol,"_",temp_stock_agg$stock_quote_date)
 temp_stock_ema20s = all_stock_ema20s[,c("symbol","stock_quote_date","volume","avg_open_close")]
+colnames(temp_stock_ema20s) = paste0(colnames(temp_stock_ema20s),"_ema20")
 rownames(temp_stock_ema20s) = paste0(temp_stock_ema20s$symbol,"_",temp_stock_ema20s$stock_quote_date)
 temp_stock_ema8s = all_stock_ema8s[,c("symbol","stock_quote_date","volume","avg_open_close")]
+colnames(temp_stock_ema8s) = paste0(colnames(temp_stock_ema8s),"_ema8")
 rownames(temp_stock_ema8s) = paste0(temp_stock_ema8s$symbol,"_",temp_stock_ema8s$stock_quote_date)
+
+merge_df = as.data.frame(cbind(temp_option_agg,
+                               temp_option_ema20s[rownames(temp_option_agg),],
+                               temp_option_ema8s[rownames(temp_option_agg),],
+                               temp_stock_agg[rownames(temp_option_agg),],
+                               temp_stock_ema20s[rownames(temp_option_agg),],
+                               temp_stock_ema8s[rownames(temp_option_agg),],
+                               all_outcomes[rownames(temp_option_agg),]))
 
 ###Remove any tickers with stock splits during the test date range
 all_splits = readRDS("C:/Users/Andy/Downloads/Investing files/all_splits.RDS")
+stocks_to_drop = c("ADS","AGN","AKS","ALXN","APC","AVP",
+                   "BBBY","BRK.B","CELG","CERN","COG","CTXS","CXO",
+                   "DF","DISCK","DLPH","DNR","DRE","DTV","ENDP","ESV","ETFC",
+                   "FB","FBHS","FII","FLIR","FRC","FRX","FTR","GRA","HFC","HRS",
+                   "JCP","JEC","KSU","LLL","LM","LSI","MON","MXIM",
+                   "NBL","NLSN","NYX","PBCT","QEP","RDC","RE","RHT","RRD","RTN",
+                   "SIVB","STI","TIF","TSS","VAR","VIAB","WCG","WIN","WPX","XEC","XL","XLNX","YHOO")
+temp_splits = all_splits[all_splits$date %in% all_dates,]
+stocks_to_drop = c(stocks_to_drop,unique(temp_splits$ticker))
+stocks_to_drop = unique(stocks_to_drop)
 
+filtered_df = merge_df[!(merge_df$option_underlying_ticker %in% stocks_to_drop),]
+
+filtered_df[,grepl("volume",colnames(filtered_df)) | grepl("_open_interest_",colnames(filtered_df))] = 
+  log10(filtered_df[,grepl("volume",colnames(filtered_df)) | grepl("_open_interest_",colnames(filtered_df))] + 1)
 
 ###Check correlation between features and total stock change for candidate finmarkers
+test_cor = cor(filtered_df$time1_total_change,filtered_df[,grepl("volume",colnames(filtered_df)) | grepl("_open_interest_",colnames(filtered_df))],use="pairwise.complete.obs")
 
+##Derive TSPs for predicting selected outcomes
+test_mat = filtered_df[rowSums(is.na(filtered_df)) == 0,]
+test_input = as.matrix(t(test_mat[,grepl("volume",colnames(test_mat)) | grepl("_open_interest_",colnames(test_mat))]))
+test_group = as.factor(test_mat$time1_increase2 > 0 | 
+                         test_mat$time2_increase2 > 0 | 
+                         test_mat$time3_increase2 > 0 | 
+                         test_mat$time4_increase2 > 0 | 
+                         test_mat$time5_increase2 > 0 | 
+                         test_mat$time6_increase2 > 0 | 
+                         test_mat$time7_increase2 > 0 | 
+                         test_mat$time8_increase2 > 0 | 
+                         test_mat$time9_increase2 > 0 | 
+                         test_mat$time10_increase2 > 0)
+test_classifier = SWAP.Train.KTSP(test_input, test_group, krange=c(3:50))
+test_classifier = as.data.frame(test_classifier$TSPs)
+
+temp_mat = as.data.frame(t(test_input))
+for(tsp_i in 1:nrow(test_classifier)){
+  temp_mat[,paste0("tsp_comparison",tsp_i)] = as.numeric(temp_mat[,test_classifier$gene1[tsp_i]] > temp_mat[,test_classifier$gene2[tsp_i]])
+}
+
+input_x = temp_mat[,grepl("tsp_comparison",colnames(temp_mat))]
+input_y = test_group
+test_cvfit = cv.ncvreg(input_x, input_y,nfolds = 10,trace = TRUE)
+test_coefs = coef(test_cvfit)
+test_score = t(t(input_x) * test_coefs[2:length(test_coefs)])
+test_score = rowSums(test_score)
+test_score = exp(test_score)/(1+exp(test_score))
+
+test_group2 = as.factor(test_mat$time10_decrease2 > 0)
+test_classifier = SWAP.Train.KTSP(test_input, test_group2, krange=c(3:50))
+test_classifier = as.data.frame(test_classifier$TSPs)
+
+temp_mat = as.data.frame(t(test_input))
+for(tsp_i in 1:nrow(test_classifier)){
+  temp_mat[,paste0("tsp_comparison",tsp_i)] = as.numeric(temp_mat[,test_classifier$gene1[tsp_i]] > temp_mat[,test_classifier$gene2[tsp_i]])
+}
+
+input_x2 = temp_mat[,grepl("tsp_comparison",colnames(temp_mat))]
+input_y2 = test_group2
+test_cvfit = cv.ncvreg(input_x2, input_y2,nfolds = 10,trace = TRUE)
+test_coefs = coef(test_cvfit)
+test_score2 = t(t(input_x2) * test_coefs[2:length(test_coefs)])
+test_score2 = rowSums(test_score2)
+test_score2 = exp(test_score2)/(1+exp(test_score2))
 
 ```
 
