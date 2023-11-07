@@ -692,6 +692,60 @@ for(temp_date_i in 1:length(all_dates)){
 }
 saveRDS(full_outcomes,file="C:/Users/Andy/Downloads/Investing files/full_outcomes.RDS")
 
+###
+
+##Create outcome tables
+stock_aggregate = readRDS("C:/Users/Andy/Downloads/Investing files/stock_aggregate.RDS")
+stock_aggregate = stock_aggregate[order(stock_aggregate$symbol,stock_aggregate$stock_quote_date),]
+stock_aggregate$avg_open_close = ((stock_aggregate$open + stock_aggregate$close) / 2)
+ticker_dates = readRDS("C:/Users/Andy/Downloads/Investing files/SMA_options_ticker_dates.RDS")
+stocks_for_SMA = names(ticker_dates)[(ticker_dates == "2013-01-02")]
+all_dates = unique(stock_aggregate$stock_quote_date)
+
+full_outcomes = NULL
+input_aggregate = stock_aggregate[stock_aggregate$symbol %in% stocks_for_SMA,]
+for(temp_date_i in 1:length(all_dates)){
+  temp_aggregate = input_aggregate[input_aggregate$stock_quote_date == all_dates[temp_date_i],]
+  rownames(temp_aggregate) = temp_aggregate$symbol
+  temp_result = temp_aggregate[,c("symbol","stock_quote_date")]
+  for(temp_counter_i in 1:10){
+    if((temp_date_i+temp_counter_i) < length(all_dates)){
+      comp_aggregate = input_aggregate[input_aggregate$stock_quote_date == all_dates[temp_date_i+temp_counter_i],]
+      rownames(comp_aggregate) = comp_aggregate$symbol
+      temp_result[,paste0("time",temp_counter_i,"_increase2")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"avg_open_close"] >= 1.02*temp_aggregate$avg_open_close)
+      temp_result[,paste0("time",temp_counter_i,"_increase5")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"avg_open_close"] >= 1.05*temp_aggregate$avg_open_close)
+      temp_result[,paste0("time",temp_counter_i,"_increase10")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"avg_open_close"] >= 1.1*temp_aggregate$avg_open_close)
+      temp_result[,paste0("time",temp_counter_i,"_increase20")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"avg_open_close"] >= 1.2*temp_aggregate$avg_open_close)
+      temp_result[,paste0("time",temp_counter_i,"_increase50")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"avg_open_close"] >= 1.5*temp_aggregate$avg_open_close)
+      temp_result[,paste0("time",temp_counter_i,"_decrease2")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"avg_open_close"] <= 0.98*temp_aggregate$avg_open_close)
+      temp_result[,paste0("time",temp_counter_i,"_decrease5")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"avg_open_close"] <= 0.95*temp_aggregate$avg_open_close)
+      temp_result[,paste0("time",temp_counter_i,"_decrease10")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"avg_open_close"] <= 0.9*temp_aggregate$avg_open_close)
+      temp_result[,paste0("time",temp_counter_i,"_decrease20")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"avg_open_close"] <= 0.8*temp_aggregate$avg_open_close)
+      temp_result[,paste0("time",temp_counter_i,"_decrease50")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"avg_open_close"] <= 0.5*temp_aggregate$avg_open_close)
+      temp_result[,paste0("time",temp_counter_i,"_total_change")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"avg_open_close"] / temp_aggregate$avg_open_close)
+    }else{
+      temp_result[,paste0("time",temp_counter_i,"_increase2")] = NA
+      temp_result[,paste0("time",temp_counter_i,"_increase5")] = NA
+      temp_result[,paste0("time",temp_counter_i,"_increase10")] = NA
+      temp_result[,paste0("time",temp_counter_i,"_increase20")] = NA
+      temp_result[,paste0("time",temp_counter_i,"_increase50")] = NA
+      temp_result[,paste0("time",temp_counter_i,"_decrease2")] = NA
+      temp_result[,paste0("time",temp_counter_i,"_decrease5")] = NA
+      temp_result[,paste0("time",temp_counter_i,"_decrease10")] = NA
+      temp_result[,paste0("time",temp_counter_i,"_decrease20")] = NA
+      temp_result[,paste0("time",temp_counter_i,"_decrease50")] = NA
+      temp_result[,paste0("time",temp_counter_i,"_total_change")] = NA
+    }
+  }
+  if(is.null(full_outcomes)){
+    full_outcomes = temp_result
+  }else{
+    full_outcomes = rbind(full_outcomes,temp_result)
+  }
+  print(paste0("Finished with day ",temp_date_i))
+}
+saveRDS(full_outcomes,file="C:/Users/Andy/Downloads/Investing files/full_outcomes.RDS")
+
 ##Subset to option EMA volume + open interest and stock EMA price (divided by day avg_open_close?) + volume + absolute_stock_avg_open_close
 ##Add in day values for options and stocks
 
@@ -732,6 +786,51 @@ for(temp_ticker_i in 1:length(stocks_for_SMA)){
   }
 }
 saveRDS(all_splits,file="C:/Users/Andy/Downloads/Investing files/all_splits.RDS")
+
+```
+
+```{r create predictive model input object}
+
+full_aggregate = readRDS("C:/Users/Andy/Downloads/Investing files/full_options_aggregate.RDS")
+full_aggregate = full_aggregate[order(full_aggregate$option_underlying_ticker,full_aggregate$option_quote_date),]
+all_option_ema20s = readRDS("C:/Users/Andy/Downloads/Investing files/all_option_ema20s.RDS")
+all_option_ema8s = readRDS("C:/Users/Andy/Downloads/Investing files/all_option_ema8s.RDS")
+ticker_dates = readRDS("C:/Users/Andy/Downloads/Investing files/SMA_options_ticker_dates.RDS")
+stocks_for_SMA = names(ticker_dates)[(ticker_dates == "2013-01-02")]
+all_dates = unique(stock_aggregate$stock_quote_date)
+all_stock_ema20s = readRDS("C:/Users/Andy/Downloads/Investing files/all_stock_ema20s.RDS")
+all_stock_ema8s = readRDS("C:/Users/Andy/Downloads/Investing files/all_stock_ema8s.RDS")
+stock_aggregate = readRDS("C:/Users/Andy/Downloads/Investing files/stock_aggregate.RDS")
+stock_aggregate = stock_aggregate[order(stock_aggregate$symbol,stock_aggregate$stock_quote_date),]
+stock_aggregate$avg_open_close = ((stock_aggregate$open + stock_aggregate$close) / 2)
+stock_aggregate = stock_aggregate[stock_aggregate$symbol %in% stocks_for_SMA,]
+
+temp_option_agg = full_aggregate[,grepl("_listings_",colnames(full_aggregate)) | grepl("_total_volume_",colnames(full_aggregate)) | 
+                                   grepl("_open_interest_",colnames(full_aggregate)) | grepl("option_underlying_ticker",colnames(full_aggregate)) | 
+                                   grepl("option_quote_date",colnames(full_aggregate))]
+rownames(temp_option_agg) = paste0(temp_option_agg$option_underlying_ticker,"_",temp_option_agg$option_quote_date)
+temp_option_ema20s = all_option_ema20s[,grepl("_listings_",colnames(all_option_ema20s)) | grepl("_total_volume_",colnames(all_option_ema20s)) | 
+                                   grepl("_open_interest_",colnames(all_option_ema20s)) | grepl("option_underlying_ticker",colnames(all_option_ema20s)) | 
+                                   grepl("option_quote_date",colnames(all_option_ema20s))]
+rownames(temp_option_ema20s) = paste0(temp_option_ema20s$option_underlying_ticker,"_",temp_option_ema20s$option_quote_date)
+temp_option_ema8s = all_option_ema20s[,grepl("_listings_",colnames(all_option_ema8s)) | grepl("_total_volume_",colnames(all_option_ema8s)) | 
+                                   grepl("_open_interest_",colnames(all_option_ema8s)) | grepl("option_underlying_ticker",colnames(all_option_ema8s)) | 
+                                   grepl("option_quote_date",colnames(all_option_ema8s))]
+rownames(temp_option_ema8s) = paste0(temp_option_ema8s$option_underlying_ticker,"_",temp_option_ema8s$option_quote_date)
+
+temp_stock_agg = stock_aggregate[,c("symbol","stock_quote_date","volume","avg_open_close")]
+rownames(temp_stock_agg) = paste0(temp_stock_agg$symbol,"_",temp_stock_agg$stock_quote_date)
+temp_stock_ema20s = all_stock_ema20s[,c("symbol","stock_quote_date","volume","avg_open_close")]
+rownames(temp_stock_ema20s) = paste0(temp_stock_ema20s$symbol,"_",temp_stock_ema20s$stock_quote_date)
+temp_stock_ema8s = all_stock_ema8s[,c("symbol","stock_quote_date","volume","avg_open_close")]
+rownames(temp_stock_ema8s) = paste0(temp_stock_ema8s$symbol,"_",temp_stock_ema8s$stock_quote_date)
+
+###Remove any tickers with stock splits during the test date range
+all_splits = readRDS("C:/Users/Andy/Downloads/Investing files/all_splits.RDS")
+
+
+###Check correlation between features and total stock change for candidate finmarkers
+
 
 ```
 

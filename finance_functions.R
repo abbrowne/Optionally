@@ -7,6 +7,7 @@ library(stringr)
 library(RQuantLib)
 library(bizdays)
 library(parallel)
+
 ##Update below with dates for full range of interest
 load_quantlib_calendars("UnitedStates/NYSE",from="2000-01-01",to="2030-12-31")
 
