@@ -873,6 +873,15 @@ test_group = as.factor(test_mat$time1_increase2 > 0 |
                          test_mat$time8_increase2 > 0 | 
                          test_mat$time9_increase2 > 0 | 
                          test_mat$time10_increase2 > 0)
+
+##Save test input and output data for use in other models
+test_output = as.numeric(test_group)-1
+write.table(t(test_input),file="test_input.tsv",sep="\t")
+write.table(test_output,file="test_output.tsv",sep="\t")
+
+library(switchBox)
+library(ncvreg)
+
 test_classifier = SWAP.Train.KTSP(test_input, test_group, krange=c(3:50))
 test_classifier = as.data.frame(test_classifier$TSPs)
 
@@ -908,7 +917,693 @@ test_score2 = exp(test_score2)/(1+exp(test_score2))
 
 ```
 
+```{r develop XGBoost model}
+
+library(xgboost)
+
+test_input <- as.data.frame(read.table("test_input.tsv",sep="\t"))
+test_output <- as.data.frame(read.table("test_output.tsv",sep="\t"))
+
+# Creating a sample dataset
+set.seed(123)
+data_matrix <- as.matrix(data.frame(cbind(test_input,test_output))) # last column as binary target
+
+# Splitting the data
+train_rows <- sample(1:nrow(data_matrix), 0.8 * nrow(data_matrix))
+train_data <- data_matrix[train_rows, ]
+test_data <- data_matrix[-train_rows, ]
+
+# Create DMatrix
+dtrain <- xgb.DMatrix(data = train_data[, -ncol(train_data)], label = train_data[, ncol(train_data)])
+dtest <- xgb.DMatrix(data = test_data[, -ncol(test_data)], label = test_data[, ncol(test_data)])
+
+params <- list(
+  booster = "gbtree",
+  objective = "binary:logistic",
+  eta = 0.1,
+  max_depth = 6,
+  min_child_weight = 1,
+  subsample = 0.8,
+  colsample_bytree = 0.8
+)
+
+num_rounds <- 100
+xgb_model <- xgb.train(
+  params = params,
+  data = dtrain,
+  nrounds = num_rounds,
+  watchlist = list(train = dtrain, eval = dtest),
+  early_stopping_rounds = 10,
+  print_every_n = 10
+)
+
+predictions <- predict(xgb_model, dtest)
+predicted_classes <- ifelse(predictions > 0.5, 1, 0)
+
+# Evaluating the model
+library(caret)
+
+confusionMatrix(factor(predicted_classes), factor(test_data[, ncol(test_data)]))
+
+```
+
 ```{r run exploratory predictions}
+
+library(quantmod)
+
+# Define the stock symbol
+symbol <- 'AAPL' # You can replace this with your desired stock symbol
+
+# Fetch option chain data
+options_data <- getOptionChain(symbol, NULL)
+
+# View the data
+print(options_data)
+
+```
+
+```{r new option chain aggregation from discountoptiondata}
+
+library(dplyr)
+library(readr)
+library(lubridate)
+library(stringr)
+library(RQuantLib)
+library(bizdays)
+
+load_quantlib_calendars("UnitedStates/NYSE",from="2000-01-01",to="2030-12-31")
+
+option_chain_aggregator_new <- function(input_option_chain, min_strike_ratio=NULL, max_strike_ratio=NULL,
+                                    min_avg_days_to_expiry=NULL, max_avg_days_to_expiry=NULL) {
+  input_ticker <- unique(input_option_chain$Symbol)
+  input_date <- unique(input_option_chain$DataDate)
+  input_underlying_price <- unique(input_option_chain$UnderlyingPrice)
+  
+  input_option_chain$days_to_expiry <- as.integer(difftime(ymd(input_option_chain$ExpirationDate),
+                                                            ymd(input_option_chain$DataDate), units = "days"))
+  input_option_chain$business_days_to_expiry = as.numeric(bizdays(as.Date(input_option_chain$DataDate),
+                                                                  as.Date(input_option_chain$ExpirationDate), "QuantLib/UnitedStates/NYSE"))
+  
+  input_option_chain$mean_days_to_expiry <- rowMeans(input_option_chain[c("days_to_expiry", "business_days_to_expiry")])
+  input_option_chain$option_ratio <- input_option_chain$StrikePrice / input_option_chain$UnderlyingPrice
+  
+  if(length(input_ticker) > 1) {
+    return("Error: Must provide input with only 1 included ticker")
+  }
+  if(length(input_date) > 1) {
+    return("Error: Must provide input with only 1 quote date")
+  }
+  if(length(input_underlying_price) > 1) {
+    return("Error: Differing underlying average for the same day")
+  }
+  
+  if(is.null(min_strike_ratio) && is.null(max_strike_ratio)) {
+    return("Error: Must provide strike ratios to aggregate on")
+  } else {
+    if(!is.null(min_strike_ratio) && !is.null(max_strike_ratio)) {
+      input_option_chain <- input_option_chain %>%
+        filter(option_ratio > min_strike_ratio & option_ratio <= max_strike_ratio)
+    } else if(is.null(min_strike_ratio) && !is.null(max_strike_ratio)) {
+      input_option_chain <- input_option_chain %>%
+        filter(option_ratio <= max_strike_ratio)
+    } else if(!is.null(min_strike_ratio) && is.null(max_strike_ratio)) {
+      input_option_chain <- input_option_chain %>%
+        filter(option_ratio > min_strike_ratio)
+    }
+  }
+  
+  if(is.null(min_avg_days_to_expiry) && is.null(max_avg_days_to_expiry)) {
+    return("Error: Must provide expiration day ranges to aggregate on")
+  } else {
+    if(!is.null(min_avg_days_to_expiry) && !is.null(max_avg_days_to_expiry)) {
+      input_option_chain <- input_option_chain %>%
+        filter(mean_days_to_expiry >= min_avg_days_to_expiry & mean_days_to_expiry < max_avg_days_to_expiry)
+    } else if(is.null(min_avg_days_to_expiry) && !is.null(max_avg_days_to_expiry)) {
+      input_option_chain <- input_option_chain %>%
+        filter(mean_days_to_expiry < max_avg_days_to_expiry)
+    } else if(!is.null(min_avg_days_to_expiry) && is.null(max_avg_days_to_expiry)) {
+      input_option_chain <- input_option_chain %>%
+        filter(mean_days_to_expiry >= min_avg_days_to_expiry)
+    }
+  }
+  
+  call_data <- input_option_chain %>% filter(PutCall == "call")
+  put_data <- input_option_chain %>% filter(PutCall == "put")
+  
+  temp_results <- list(
+    option_underlying_ticker = input_ticker,
+    option_quote_date = input_date,
+    option_underlying_price = input_underlying_price,
+    option_total_call_listings = nrow(call_data),
+    option_call_total_volume = sum(call_data$Volume, na.rm = TRUE),
+    option_call_total_open_interest = sum(call_data$OpenInterest, na.rm = TRUE),
+    option_total_put_listings = nrow(put_data),
+    option_put_total_volume = sum(put_data$Volume, na.rm = TRUE),
+    option_put_total_open_interest = sum(put_data$OpenInterest, na.rm = TRUE)
+  )
+  
+  return(as.data.frame(temp_results))
+}
+
+main_dir <- "E:/Market_Data/DiscountOptionData/DTNSubscription/"
+setwd(main_dir)
+
+raw_files <- list.files(main_dir, pattern = "\\.csv$")
+temp_subset <- raw_files[str_detect(raw_files, fixed('.csv')) & str_detect(raw_files, fixed('OData1'))]
+date_list <- unlist(lapply(temp_subset,function(x){paste0("D_",str_split(x,"_")[[1]][2])}))
+
+timestamp <- Sys.time()
+
+for(temp_date in date_list) {
+  temp_file1 <- paste0(temp_date, "_OData1.csv")
+  temp_file2 <- paste0(temp_date, "_OData2.csv")
+  
+  temp_df1 <- read_csv(temp_file1)
+  temp_df2 <- read_csv(temp_file2)
+  
+  dfOptions <- bind_rows(temp_df1, temp_df2)
+  
+  all_tickers <- unique(dfOptions$Symbol)
+  
+  new_chain <- NULL
+  for(temp_ticker in all_tickers) {
+    test_chain <- dfOptions %>% filter(Symbol == temp_ticker)
+    print(temp_ticker)
+    
+    # Suggest starting with <10, 10-25, 25-50, 50-100, 100-200, 200-350, >350
+    min_strike_set = c(NA, 0.5, 0.75, 0.9, 0.95, 1, 1.05, 1.1, 1.25, 1.5)
+    max_strike_set = c(0.5, 0.75, 0.9, 0.95, 1, 1.05, 1.1, 1.25, 1.5, NA)
+    min_day_set = c(NA, 10, 25, 50, 100, 200, 350)
+    max_day_set = c(10, 25, 50, 100, 200, 350, NA)
+    for (temp_strike_i in 1:length(min_strike_set)){
+      for (temp_day_i in 1:length(min_day_set)){
+        # Aggregate over all strike ranges
+        test_result = option_chain_aggregator_new(
+            test_chain, min_strike_ratio=min_strike_set[temp_strike_i],
+            max_strike_ratio=max_strike_set[temp_strike_i],
+            min_avg_days_to_expiry=min_day_set[temp_day_i],
+            max_avg_days_to_expiry=max_day_set[temp_day_i]
+        )
+        if(is.null(new_chain)) {
+          new_chain <- test_result
+        } else {
+          new_chain <- bind_rows(new_chain, test_result)
+        }
+      }
+    }
+  }
+  
+  write_csv(new_chain, paste0("aggregate_files/", temp_date, "_aggregate.csv"))
+  print(paste("Finished with", temp_date))
+  print(timestamp)
+}
+
+
+```
+
+```{r new test}
+
+library(future)
+library(furrr)
+library(dplyr)
+library(readr)
+library(lubridate)
+library(stringr)
+library(RQuantLib)
+library(bizdays)
+
+plan(multisession)  # Use multicore, adjust based on your system capabilities
+
+option_chain_aggregator_new <- function(input_option_chain, min_strike_ratio=NULL, max_strike_ratio=NULL,
+                                    min_avg_days_to_expiry=NULL, max_avg_days_to_expiry=NULL) {
+  load_quantlib_calendars("UnitedStates/NYSE", from = "2000-01-01", to = "2030-12-31")
+  input_ticker <- unique(input_option_chain$Symbol)
+  input_date <- unique(input_option_chain$DataDate)
+  input_underlying_price <- unique(input_option_chain$UnderlyingPrice)
+  
+  input_option_chain$days_to_expiry <- as.integer(difftime(ymd(input_option_chain$ExpirationDate),
+                                                            ymd(input_option_chain$DataDate), units = "days"))
+  input_option_chain$business_days_to_expiry = as.numeric(bizdays(as.Date(input_option_chain$DataDate),
+                                                                  as.Date(input_option_chain$ExpirationDate), "QuantLib/UnitedStates/NYSE"))
+  
+  input_option_chain$mean_days_to_expiry <- rowMeans(input_option_chain[c("days_to_expiry", "business_days_to_expiry")])
+  input_option_chain$option_ratio <- input_option_chain$StrikePrice / input_option_chain$UnderlyingPrice
+  
+  if(length(input_ticker) > 1) {
+    return("Error: Must provide input with only 1 included ticker")
+  }
+  if(length(input_date) > 1) {
+    return("Error: Must provide input with only 1 quote date")
+  }
+  if(length(input_underlying_price) > 1) {
+    return("Error: Differing underlying average for the same day")
+  }
+  
+  if(is.null(min_strike_ratio) && is.null(max_strike_ratio)) {
+    return("Error: Must provide strike ratios to aggregate on")
+  } else {
+    if(!is.null(min_strike_ratio) && !is.null(max_strike_ratio)) {
+      input_option_chain <- input_option_chain %>%
+        filter(option_ratio > min_strike_ratio & option_ratio <= max_strike_ratio)
+    } else if(is.null(min_strike_ratio) && !is.null(max_strike_ratio)) {
+      input_option_chain <- input_option_chain %>%
+        filter(option_ratio <= max_strike_ratio)
+    } else if(!is.null(min_strike_ratio) && is.null(max_strike_ratio)) {
+      input_option_chain <- input_option_chain %>%
+        filter(option_ratio > min_strike_ratio)
+    }
+  }
+  
+  if(is.null(min_avg_days_to_expiry) && is.null(max_avg_days_to_expiry)) {
+    return("Error: Must provide expiration day ranges to aggregate on")
+  } else {
+    if(!is.null(min_avg_days_to_expiry) && !is.null(max_avg_days_to_expiry)) {
+      input_option_chain <- input_option_chain %>%
+        filter(mean_days_to_expiry >= min_avg_days_to_expiry & mean_days_to_expiry < max_avg_days_to_expiry)
+    } else if(is.null(min_avg_days_to_expiry) && !is.null(max_avg_days_to_expiry)) {
+      input_option_chain <- input_option_chain %>%
+        filter(mean_days_to_expiry < max_avg_days_to_expiry)
+    } else if(!is.null(min_avg_days_to_expiry) && is.null(max_avg_days_to_expiry)) {
+      input_option_chain <- input_option_chain %>%
+        filter(mean_days_to_expiry >= min_avg_days_to_expiry)
+    }
+  }
+  
+  call_data <- input_option_chain %>% filter(PutCall == "call")
+  put_data <- input_option_chain %>% filter(PutCall == "put")
+  
+  temp_results <- list(
+    option_underlying_ticker = input_ticker,
+    option_quote_date = input_date,
+    option_underlying_price = input_underlying_price,
+    option_total_call_listings = nrow(call_data),
+    option_call_total_volume = sum(call_data$Volume, na.rm = TRUE),
+    option_call_total_open_interest = sum(call_data$OpenInterest, na.rm = TRUE),
+    option_total_put_listings = nrow(put_data),
+    option_put_total_volume = sum(put_data$Volume, na.rm = TRUE),
+    option_put_total_open_interest = sum(put_data$OpenInterest, na.rm = TRUE)
+  )
+  
+  return(as.data.frame(temp_results))
+}
+
+# Your option_chain_aggregator_new function remains unchanged
+
+main_dir <- "E:/Market_Data/DiscountOptionData/DTNSubscription/"
+setwd(main_dir)
+
+raw_files <- list.files(main_dir, pattern = "\\.csv$")
+temp_subset <- raw_files[str_detect(raw_files, fixed('.csv')) & str_detect(raw_files, fixed('OData1'))]
+date_list <- unlist(lapply(temp_subset, function(x) {paste0("D_", str_split(x, "_")[[1]][2])}))
+
+timestamp <- Sys.time()
+
+for(temp_date in date_list) {
+  temp_file1 <- paste0(temp_date, "_OData1.csv")
+  temp_file2 <- paste0(temp_date, "_OData2.csv")
+  
+  temp_df1 <- read_csv(temp_file1)
+  temp_df2 <- read_csv(temp_file2)
+  
+  dfOptions <- bind_rows(temp_df1, temp_df2)
+  
+  all_tickers <- unique(dfOptions$Symbol)
+
+  # Define your sets outside of the loop to avoid redundancy
+  min_strike_set <- c(NA, 0.5, 0.75, 0.9, 0.95, 1, 1.05, 1.1, 1.25, 1.5)
+  max_strike_set <- c(0.5, 0.75, 0.9, 0.95, 1, 1.05, 1.1, 1.25, 1.5, NA)
+  min_day_set <- c(NA, 10, 25, 50, 100, 200, 350)
+  max_day_set <- c(10, 25, 50, 100, 200, 350, NA)
+
+  results <- future_map(all_tickers, function(temp_ticker) {
+    test_chain <- dfOptions %>% filter(Symbol == temp_ticker)
+
+    new_chain <- NULL
+    for(temp_strike_i in 1:length(min_strike_set)) {
+      for(temp_day_i in 1:length(min_day_set)) {
+        test_result <- option_chain_aggregator_new(
+          test_chain, min_strike_ratio = min_strike_set[temp_strike_i],
+          max_strike_ratio = max_strike_set[temp_strike_i],
+          min_avg_days_to_expiry = min_day_set[temp_day_i],
+          max_avg_days_to_expiry = max_day_set[temp_day_i]
+        )
+        new_chain <- if(is.null(new_chain)) test_result else bind_rows(new_chain, test_result)
+      }
+    }
+    new_chain
+  })
+
+  final_chain <- bind_rows(results)
+  write_csv(final_chain, paste0("aggregate_files/", temp_date, "_aggregate.csv"))
+  print(paste("Finished with", temp_date))
+  print(timestamp)
+}
+
+
+```
+
+```{r redone option aggregator}
+
+source("C:/Users/Andy/Downloads/Investing files/Investing_Project_Rstudio/finance_functions.R")
+library(parallel)
+
+# Function to process a single file in parallel
+
+option_chain_aggregatorV2 = function(input_option_chain, min_strike_ratio=NA, max_strike_ratio=NA,min_avg_days_to_expiry=NA,max_avg_days_to_expiry=NA){
+      input_ticker <- unique(input_option_chain$Symbol)
+      input_date <- unique(input_option_chain$DataDate)
+      input_underlying_price <- unique(input_option_chain$UnderlyingPrice)
+      
+      input_option_chain$days_to_expiry <- as.numeric(as.Date(input_option_chain$ExpirationDate)-as.Date(input_option_chain$DataDate))
+      input_option_chain$business_days_to_expiry = as.numeric(bizdays(as.Date(input_option_chain$DataDate),
+                                                                      as.Date(input_option_chain$ExpirationDate), "QuantLib/UnitedStates/NYSE"))
+      
+      input_option_chain$mean_days_to_expiry <- rowMeans(input_option_chain[c("days_to_expiry", "business_days_to_expiry")])
+      input_option_chain$option_ratio <- input_option_chain$StrikePrice / input_option_chain$UnderlyingPrice
+      if(length(input_ticker) > 1){
+        return("Error: Must provide input with only 1 included ticker")
+      }
+      if(length(input_date) > 1){
+        return("Error: Must provide input with only 1 quote date")
+      }
+      if(length(input_underlying_price) > 1){
+        return("Error: Differing underlying average for the same day")
+      }
+      if(is.na(min_strike_ratio) & is.na(max_strike_ratio)){
+        return("Error: Must provide strike ratios to aggregate on")
+      }else if(is.na(min_strike_ratio) & !is.na(max_strike_ratio)){
+        input_option_chain = input_option_chain[input_option_chain$option_ratio <= max_strike_ratio,]
+        input_strike_range = paste0("x <= ", max_strike_ratio)
+      }else if(!is.na(min_strike_ratio) & is.na(max_strike_ratio)){
+        input_option_chain = input_option_chain[input_option_chain$option_ratio > min_strike_ratio,]
+        input_strike_range = paste0(min_strike_ratio," < x")
+      }else if(!is.na(min_strike_ratio) & !is.na(max_strike_ratio)){
+        input_option_chain = input_option_chain[input_option_chain$option_ratio > min_strike_ratio,]
+        input_option_chain = input_option_chain[input_option_chain$option_ratio <= max_strike_ratio,]
+        input_strike_range = paste0(min_strike_ratio," < x <= ", max_strike_ratio)
+      }
+      if(is.na(min_avg_days_to_expiry) & is.na(max_avg_days_to_expiry)){
+        return("Error: Must provide expiration day ranges to aggregate on")
+      }else if(is.na(min_avg_days_to_expiry) & !is.na(max_avg_days_to_expiry)){
+        input_option_chain = input_option_chain[input_option_chain$mean_days_to_expiry < max_avg_days_to_expiry,]
+        input_expiry_range = paste0("x < ", max_avg_days_to_expiry)
+      }else if(!is.na(min_avg_days_to_expiry) & is.na(max_avg_days_to_expiry)){
+        input_option_chain = input_option_chain[input_option_chain$mean_days_to_expiry >= min_avg_days_to_expiry,]
+        input_expiry_range = paste0(min_avg_days_to_expiry," <= x")
+      }else if(!is.na(min_avg_days_to_expiry) & !is.na(max_avg_days_to_expiry)){
+        input_option_chain = input_option_chain[input_option_chain$mean_days_to_expiry >= min_avg_days_to_expiry,]
+        input_option_chain = input_option_chain[input_option_chain$mean_days_to_expiry < max_avg_days_to_expiry,]
+        input_expiry_range = paste0(min_avg_days_to_expiry," <= x < ", max_avg_days_to_expiry)
+      }
+      
+      temp_results <- list("option_underlying_ticker"=input_ticker,
+                           "option_quote_date"=input_date,
+                           "option_underlying_price"=input_underlying_price,
+                           "option_strike_range"=input_strike_range,
+                           "option_expiry_range"=input_expiry_range)
+      
+      if(nrow(input_option_chain[input_option_chain$PutCall == "call",]) > 0){
+        temp_results[["option_total_call_listings"]]=nrow(input_option_chain[input_option_chain$PutCall == "call",])
+        temp_results[["option_call_total_volume"]]=sum(input_option_chain$Volume[input_option_chain$PutCall == "call"],na.rm = TRUE)
+        temp_results[["option_call_total_open_interest"]]=sum(input_option_chain$OpenInterest[input_option_chain$PutCall == "call"],na.rm = TRUE)
+      }else{
+        temp_results[["option_total_call_listings"]]=0
+        temp_results[["option_call_total_volume"]]=0
+        temp_results[["option_call_total_open_interest"]]=0
+      }
+      if(nrow(input_option_chain[input_option_chain$PutCall == "put",]) > 0){
+        temp_results[["option_total_put_listings"]]=nrow(input_option_chain[input_option_chain$PutCall == "put",])
+        temp_results[["option_put_total_volume"]]=sum(input_option_chain$Volume[input_option_chain$PutCall == "put"],na.rm = TRUE)
+        temp_results[["option_put_total_open_interest"]]=sum(input_option_chain$OpenInterest[input_option_chain$PutCall == "put"],na.rm = TRUE)
+      }else{
+        temp_results[["option_total_put_listings"]]=0
+        temp_results[["option_put_total_volume"]]=0
+        temp_results[["option_put_total_open_interest"]]=0
+      }
+      temp_results <- as.data.frame(temp_results)
+      return(temp_results)
+    }
+
+process_file <- function(file_index, date_list) {
+      temp_date <- date_list[file_index]
+      
+      # Load options data
+      temp_file1 <- paste0(main_dir, temp_date, "_OData1.csv")
+      temp_file2 <- paste0(main_dir, temp_date, "_OData2.csv")
+      
+      # Use fread for faster reading of CSVs
+      temp_df1 <- fread(temp_file1)
+      temp_df2 <- fread(temp_file2)
+      
+      filteredOptions <- rbindlist(list(temp_df1, temp_df2))
+      
+      # Filter for the first 1000 unique tickers for demonstration
+      all_tickers <- unique(filteredOptions$Symbol)[1:1000]
+      
+      # Calculate option_ratio
+      filteredOptions[, option_ratio := StrikePrice / UnderlyingPrice]
+      
+      # Initialize an empty list to store results for each ticker
+      new_chain_list <- list()
+      
+      for (temp_ticker in all_tickers) {
+        test_chain <- filteredOptions[Symbol == temp_ticker]
+        
+        # Your aggregation logic here, consider using data.table for efficiency
+        
+        # Append the result for this ticker to the list
+        new_chain_list[[temp_ticker]] <- test_chain # Replace test_chain with your actual result
+      }
+      
+      # Combine all ticker results
+      new_chain <- rbindlist(new_chain_list, use.names = TRUE, fill = TRUE)
+      
+      # Save the result
+      saveRDS(new_chain, paste0("aggregate_files/", temp_date, "_aggregate.RDS"))
+    }
+
+##First merge stock data by date and calculate averages
+##Second aggregate options by strike ranges
+##Third aggregate options by expiry ranges (use average of days and business days to expiry)
+##  Suggest starting with <10, 10-25, 25-50, 50-100, 100-200, 200-350, >350
+##Fourth merge option ratio and expiry ranges by date and calculate averages
+
+main_dir = "E:/Market_Data/DiscountOptionData/DTNSubscription/"
+
+# Change the working directory
+setwd(main_dir)
+
+# Print the current working directory to verify the change
+print(getwd())
+
+# Get list of option and stock files
+
+raw_files <- list.files(main_dir, pattern = "\\.csv$")
+temp_subset <- raw_files[str_detect(raw_files, fixed('.csv')) & str_detect(raw_files, fixed('OData1'))]
+date_list <- unlist(lapply(temp_subset, function(x) {paste0("D_", str_split(x, "_")[[1]][2])}))
+
+# Use parallel processing to process files concurrently
+num_cores <- detectCores()
+cl <- makeCluster(num_cores)
+timestamp()
+result <- parLapply(cl, 1:length(date_list), process_file)
+stopCluster(cl)
+
+timestamp()
+
+
+```
+
+
+```{r testing more optimized implementations}
+
+library(data.table)  # For efficient data manipulation and reading
+library(parallel)    # For parallel processing
+library(bizdays)     # For business days calculation
+
+# Load the external script once, assuming it defines necessary functions
+#source("C:/Users/Andy/Downloads/Investing files/Investing_Project_Rstudio/finance_functions.R")
+
+option_chain_aggregatorV3 <- function(input_option_chain, min_strike_ratio=NA, max_strike_ratio=NA, min_avg_days_to_expiry=NA, max_avg_days_to_expiry=NA) {
+  # Ensure input_option_chain is a data.table
+  setDT(input_option_chain)
+
+  # Check for unique ticker, date, and price
+  if (uniqueN(input_option_chain$Symbol) > 1 || uniqueN(input_option_chain$DataDate) > 1 || uniqueN(input_option_chain$UnderlyingPrice) > 1) {
+    stop("Error: Input must have only 1 ticker, 1 quote date, and a consistent underlying price.")
+  }
+
+  # Calculate days to expiry and option ratio
+  input_option_chain[, `:=`( 
+    days_to_expiry = as.numeric(as.Date(ExpirationDate) - as.Date(DataDate)),
+    business_days_to_expiry = as.numeric(bizdays(as.Date(DataDate), as.Date(ExpirationDate), "QuantLib/UnitedStates/NYSE")) 
+    )]
+  input_option_chain[, mean_days_to_expiry := rowMeans(.SD, na.rm = TRUE), .SDcols = c("days_to_expiry", "business_days_to_expiry")]
+  input_option_chain[, option_ratio := StrikePrice / UnderlyingPrice]
+
+  # Apply filters
+  strike_filter <- (is.na(min_strike_ratio) | input_option_chain$option_ratio > min_strike_ratio) & 
+    (is.na(max_strike_ratio) | input_option_chain$option_ratio <= max_strike_ratio)
+  days_filter <- (is.na(min_avg_days_to_expiry) | input_option_chain$mean_days_to_expiry >= min_avg_days_to_expiry) & 
+    (is.na(max_avg_days_to_expiry) | input_option_chain$mean_days_to_expiry < max_avg_days_to_expiry)
+  filtered_option_chain <- input_option_chain[strike_filter & days_filter]
+
+  # Construct results
+  temp_results <- list(
+    option_underlying_ticker = input_option_chain$Symbol[1],
+    option_quote_date = input_option_chain$DataDate[1],
+    option_underlying_price = input_option_chain$UnderlyingPrice[1]#,
+    #option_strike_range = paste(min_strike_ratio, "to", max_strike_ratio),
+    #option_expiry_range = paste(min_avg_days_to_expiry, "to", max_avg_days_to_expiry)
+  )
+
+  # Aggregate call and put data
+  call_data <- filtered_option_chain[PutCall == "call"]
+  put_data <- filtered_option_chain[PutCall == "put"]
+
+  temp_results <- c(temp_results, list(
+    option_total_call_listings = nrow(call_data),
+    option_call_total_volume = sum(call_data$Volume, na.rm = TRUE),
+    option_call_total_open_interest = sum(call_data$OpenInterest, na.rm = TRUE),
+    option_total_put_listings = nrow(put_data),
+    option_put_total_volume = sum(put_data$Volume, na.rm = TRUE),
+    option_put_total_open_interest = sum(put_data$OpenInterest, na.rm = TRUE)
+  ))
+
+  return(as.data.frame(temp_results))
+}
+
+process_fileV2 <- function(file_paths) {
+  # Efficient data reading using fread from data.table
+  combined_data <- rbindlist(lapply(file_paths, fread))
+
+  # Filter for the first 1000 unique tickers for demonstration
+  all_tickers <- unique(combined_data$Symbol)#[1:100]
+
+  # Calculate option_ratio
+  combined_data[, option_ratio := StrikePrice / UnderlyingPrice]
+
+  results_list <- lapply(all_tickers, function(ticker) {
+    test_chain <- combined_data[Symbol == ticker]
+
+    # Suggest starting with <10, 10-25, 25-50, 50-100, 100-200, 200-350, >350
+    min_strike_set = c(NA, 0.5, 0.75, 0.9, 0.95, 1, 1.05, 1.1, 1.25, 1.5)
+    max_strike_set = c(0.5, 0.75, 0.9, 0.95, 1, 1.05, 1.1, 1.25, 1.5, NA)
+    min_day_set = c(NA, 10, 25, 50, 100, 200, 350)
+    max_day_set = c(10, 25, 50, 100, 200, 350, NA)
+    merge_chain = NULL
+    for (temp_strike_i in 1:length(min_strike_set)) {
+      for (temp_day_i in 1:length(min_day_set)) {
+        # Aggregate over all strike ranges
+        test_result = option_chain_aggregatorV3(
+          test_chain,
+          min_strike_ratio = min_strike_set[temp_strike_i],
+          max_strike_ratio = max_strike_set[temp_strike_i],
+          min_avg_days_to_expiry = min_day_set[temp_day_i],
+          max_avg_days_to_expiry = max_day_set[temp_day_i]
+        )
+        colnames(test_result)[!(colnames(test_result) %in% c("option_underlying_ticker",
+                                       "option_quote_date",
+                                       "option_underlying_price"))] = 
+          paste0(colnames(test_result)[!(colnames(test_result) %in% c("option_underlying_ticker",
+                                       "option_quote_date",
+                                       "option_underlying_price"))],
+                                     "_strike_",min_strike_set[temp_strike_i],"to",max_strike_set[temp_strike_i],
+                                     "_expiry_",min_day_set[temp_day_i],"to",max_day_set[temp_day_i])
+        if(temp_strike_i == 1 & temp_day_i == 1){
+          merge_chain = test_result
+        }else{
+          merge_chain = cbind(merge_chain,
+                              test_result[,!(colnames(test_result) %in% c("option_underlying_ticker",
+                                                                          "option_quote_date",
+                                                                          "option_underlying_price"))])
+        }
+      }
+    }
+    return(merge_chain)
+  })
+
+  # Combine all ticker results
+  new_chain <- rbindlist(results_list, use.names = TRUE, fill = TRUE)
+
+  return(new_chain)
+}
+
+# Set main directory and read file names
+main_dir <- "E:/Market_Data/DiscountOptionData/DTNSubscription/"
+setwd(main_dir)
+
+raw_files <- list.files(pattern = "OData1\\.csv$")
+date_list <- sapply(raw_files, function(x) sub("_(OData1\\.csv)$", "", x))
+
+# Prepare file paths for each date
+file_paths <- lapply(date_list, function(date) {
+  c(paste0(main_dir, date, "_OData1.csv"), paste0(main_dir, date, "_OData2.csv"))
+})
+
+# Parallel processing
+num_cores <- detectCores()
+batch_i <- 1
+timestamp()
+while(batch_i*24 < length(date_list)){
+  sub_file_paths <- file_paths[(1+(24*(batch_i-1))):(24*(batch_i))]
+  cl <- makeCluster(num_cores)
+  clusterExport(cl, c("sub_file_paths", "option_chain_aggregatorV3", "process_fileV2"))
+  clusterEvalQ(cl, {
+    library(data.table)
+    library(bizdays)
+    library(stringr)
+    load_quantlib_calendars("UnitedStates/NYSE",from="2000-01-01",to="2030-12-31")
+    # Load any other libraries or source any scripts used in process_file or option_chain_aggregatorV2
+  })
+
+  # Execute in parallel and measure time
+  results <- NULL
+  system.time({
+    results <- parLapply(cl, seq_along(sub_file_paths), function(i) {
+      process_fileV2(sub_file_paths[[i]])
+    })
+  })
+  stopCluster(cl)
+  for(temp_i in 1:length(results)){
+    temp_date <- results[[temp_i]]$option_quote_date[1]
+    temp_date <- str_replace_all(temp_date,"-","")
+    saveRDS(results[[temp_i]],file=paste0("aggregate_files/D_",temp_date,"_aggregate.RDS"))
+  }
+  print(paste0("Finished batch ",batch_i))
+  timestamp()
+  batch_i <- batch_i + 1
+}
+sub_file_paths <- file_paths[(1+(24*(batch_i-1))):(length(date_list))]
+cl <- makeCluster(num_cores)
+clusterExport(cl, c("sub_file_paths", "option_chain_aggregatorV3", "process_fileV2"))
+clusterEvalQ(cl, {
+  library(data.table)
+  library(bizdays)
+  library(stringr)
+  load_quantlib_calendars("UnitedStates/NYSE",from="2000-01-01",to="2030-12-31")
+  # Load any other libraries or source any scripts used in process_file or option_chain_aggregatorV2
+})
+# Execute in parallel and measure time
+results <- NULL
+system.time({
+  results <- parLapply(cl, seq_along(sub_file_paths), function(i) {
+    process_fileV2(sub_file_paths[[i]])
+  })
+})
+stopCluster(cl)
+for(temp_i in 1:length(results)){
+  temp_date <- results[[temp_i]]$option_quote_date[1]
+  temp_date <- str_replace_all(temp_date,"-","")
+  saveRDS(results[[temp_i]],file=paste0("aggregate_files/D_",temp_date,"_aggregate.RDS"))
+}
+print(paste0("Finished batch ",batch_i))
+timestamp()
+
+
+
+
+
 
 ```
 
