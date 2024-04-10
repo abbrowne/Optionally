@@ -239,6 +239,8 @@ main_dir <- "E:/Market_Data/DiscountOptionData/DTNSubscription/"
 aggregate_files <- list.files(paste0(main_dir,"revised_aggregate_files/"), pattern = "aggregate\\.RDS$")
 ##Start with earliest aggregate file
 aggregate_files <- aggregate_files[order(aggregate_files)]
+aggregate_dates <- lapply(aggregate_files, function(x) { as.Date(str_split(x, "_")[[1]][2], format = "%Y%m%d") })
+aggregate_dates <- as.Date(unlist(aggregate_dates))  # Explicitly convert back to Date after unlisting
 
 ###Load each day and add any new tickers to the current list
 test_files <- list.files(paste0(main_dir,"revised_derived_aggregates/"))
@@ -252,6 +254,8 @@ if(length(test_files) > 0){
   end_dates <- as.Date(unlist(lapply(temp_dates,function(x){str_split(x,"_to_")[[1]][2]})), format = "%Y-%m-%d")
   end_dates <- end_dates[order(end_dates,decreasing = TRUE)]
   last_date <- end_dates[1]
+  aggregate_files <- aggregate_files[aggregate_dates > last_date]
+  
   full_aggregate <- readRDS(paste0(main_dir,"revised_derived_aggregates/",
                                    test_files[grepl("full_option_aggregate_",test_files) & grepl(end_dates[1],test_files)]))
   all_dates <- unique(full_aggregate$option_quote_date)
@@ -335,518 +339,518 @@ if(length(test_files) > 0){
   SMA50_df <- NULL
   last_date <- NULL
 }
-
-for(temp_file_i in 1:length(aggregate_files)){
-  temp_file <- readRDS(paste0(main_dir,"revised_aggregate_files/",aggregate_files[temp_file_i]))
-  new_date <- unique(temp_file$option_quote_date)
-  if(length(new_date) > 1){
-    print(paste0("Error with dates in ",aggregate_files[temp_file_i]))
-    break
-  }else{
-    if(is.null(all_dates)){
-      all_dates <- new_date
+if(length(aggregate_files) > 0){
+  for(temp_file_i in 1:length(aggregate_files)){
+    temp_file <- readRDS(paste0(main_dir,"revised_aggregate_files/",aggregate_files[temp_file_i]))
+    new_date <- unique(temp_file$option_quote_date)
+    if(length(new_date) > 1){
+      print(paste0("Error with dates in ",aggregate_files[temp_file_i]))
+      break
     }else{
-      all_dates <- c(all_dates,new_date)
-    }
-    if(is.null(added_dates)){
-      added_dates <- new_date
-    }else{
-      added_dates <- c(added_dates,new_date)
-    }
-    ##Create full aggregate with volume and open interest and derived values
-    if(is.null(full_aggregate)){
-      full_aggregate <- temp_file
-    }else{
-      full_aggregate <- as.data.frame(rbind(full_aggregate,temp_file))
-    }
-    if(!is.null(EMA5_df)){
-      temp_EMA5_tickers <- EMA5_df$option_underlying_ticker[EMA5_df$option_quote_date == all_dates[(length(all_dates)-1)]]
-    }
-    if(!is.null(SMA5_df)){
-      temp_SMA5_tickers <- SMA5_df$option_underlying_ticker[SMA5_df$option_quote_date == all_dates[(length(all_dates)-1)]]
-    }
-    if(!is.null(EMA10_df)){
-      temp_EMA10_tickers <- EMA10_df$option_underlying_ticker[EMA10_df$option_quote_date == all_dates[(length(all_dates)-1)]]
-    }
-    if(!is.null(SMA10_df)){
-      temp_SMA10_tickers <- SMA10_df$option_underlying_ticker[SMA10_df$option_quote_date == all_dates[(length(all_dates)-1)]]
-    }
-    if(!is.null(EMA20_df)){
-      temp_EMA20_tickers <- EMA20_df$option_underlying_ticker[EMA20_df$option_quote_date == all_dates[(length(all_dates)-1)]]
-    }
-    if(!is.null(SMA20_df)){
-      temp_SMA20_tickers <- SMA20_df$option_underlying_ticker[SMA20_df$option_quote_date == all_dates[(length(all_dates)-1)]]
-    }
-    if(!is.null(EMA50_df)){
-      temp_EMA50_tickers <- EMA50_df$option_underlying_ticker[EMA50_df$option_quote_date == all_dates[(length(all_dates)-1)]]
-    }
-    if(!is.null(SMA50_df)){
-      temp_SMA50_tickers <- SMA50_df$option_underlying_ticker[SMA50_df$option_quote_date == all_dates[(length(all_dates)-1)]]
-    }
-    
-    ##Calculate new EMA5 for all new stocks with prior EMA5
-    sub_aggregate <- full_aggregate[full_aggregate$option_quote_date == new_date,]
-    sub_tickers <- unique(sub_aggregate$option_underlying_ticker)
-    if(!is.null(EMA5_df)){
-      temp_tickers <- sub_tickers[sub_tickers %in% temp_EMA5_tickers]
-      temp_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker %in% temp_tickers,]
-      temp_aggregate <- temp_aggregate[order(temp_aggregate$option_underlying_ticker),]
-      temp_ema5_cols <- temp_aggregate[,c("option_underlying_ticker","option_quote_date")]
-      temp_aggregate <- temp_aggregate[,!(colnames(temp_aggregate) %in% c("option_underlying_ticker","option_quote_date"))]
-      temp_ema5_df <- EMA5_df[EMA5_df$option_quote_date == all_dates[(length(all_dates)-1)],]
-      temp_ema5_df <- temp_ema5_df[temp_ema5_df$option_underlying_ticker %in% temp_tickers,]
-      temp_ema5_df <- temp_ema5_df[order(temp_ema5_df$option_underlying_ticker),]
-      temp_ema5_df <- temp_ema5_df[,!(colnames(temp_ema5_df) %in% c("option_underlying_ticker","option_quote_date"))]
-      if(nrow(temp_aggregate) == nrow(temp_ema5_df)){
-        temp_ema5 <- (temp_aggregate) * (2/6) + (temp_ema5_df) * (1 - (2/6))
-        temp_ema5 <- as.data.frame(cbind(temp_ema5_cols,round(temp_ema5,2)))
-        EMA5_df <- as.data.frame(rbind(EMA5_df,temp_ema5))
-        sub_tickers <- sub_tickers[!(sub_tickers %in% temp_EMA5_tickers)]
-        print(paste0("EMA5 calculated from prior EMA for ",length(temp_tickers)," tickers"))
-      }else(
-        print(paste0("Error with EMA5 calculation for ", new_date))
-      )
-    }
-    if(!is.null(SMA5_df)){
-      temp_tickers <- sub_tickers[sub_tickers %in% temp_SMA5_tickers]
-      temp_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker %in% temp_tickers,]
-      temp_aggregate <- temp_aggregate[order(temp_aggregate$option_underlying_ticker),]
-      temp_ema5_cols <- temp_aggregate[,c("option_underlying_ticker","option_quote_date")]
-      temp_aggregate <- temp_aggregate[,!(colnames(temp_aggregate) %in% c("option_underlying_ticker","option_quote_date"))]
-      temp_sma5_df <- SMA5_df[SMA5_df$option_quote_date == all_dates[(length(all_dates)-1)],]
-      temp_sma5_df <- temp_sma5_df[temp_sma5_df$option_underlying_ticker %in% temp_tickers,]
-      temp_sma5_df <- temp_sma5_df[order(temp_sma5_df$option_underlying_ticker),]
-      temp_sma5_df <- temp_sma5_df[,!(colnames(temp_sma5_df) %in% c("option_underlying_ticker","option_quote_date"))]
-      if(nrow(temp_aggregate) == nrow(temp_sma5_df)){
-        temp_ema5 <- (temp_aggregate) * (2/6) + (temp_sma5_df) * (1 - (2/6))
-        temp_ema5 <- as.data.frame(cbind(temp_ema5_cols,round(temp_ema5,2)))
-        if(!is.null(EMA5_df)){
-          EMA5_df <- as.data.frame(rbind(EMA5_df,temp_ema5))
-        }else{
-          EMA5_df <- as.data.frame(temp_ema5)
-        }
-        sub_tickers <- sub_tickers[!(sub_tickers %in% temp_SMA5_tickers)]
-        print(paste0("EMA5 calculated from prior SMA for ",length(temp_tickers)," tickers"))
-      }else(
-        print(paste0("Error with SMA5 calculation for ", new_date))
-      )
-    }
-    if(length(all_dates) >= 5){
-      check_dates <- all_dates[(length(all_dates)-4):length(all_dates)]
-      sub_aggregate <- full_aggregate[full_aggregate$option_quote_date %in% check_dates,]
-      sub_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker %in% sub_tickers,]
-      sub_aggregate <- sub_aggregate[order(sub_aggregate$option_underlying_ticker),]
-      temp_tickers <- sub_tickers[sub_tickers %in% sub_aggregate$option_underlying_ticker]
-      failed_tickers <- c()
-      if(length(temp_tickers) > 0){
-        if(length(temp_tickers) > 1000){
-          print(paste0("Expect long run time for this date due to high number of SMA5 calculations"))
-          timestamp()
-        }
-        for(temp_ticker_i in 1:length(temp_tickers)){
-          temp_ticker <- temp_tickers[temp_ticker_i]
-          temp_sma5_df <- data.frame(option_underlying_ticker=temp_ticker,option_quote_date=new_date)
-          temp_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker == temp_ticker,]
-          temp_aggregate <- temp_aggregate[,!(colnames(sub_aggregate) %in% c("option_underlying_ticker","option_quote_date"))]
-          if(nrow(temp_aggregate) == 5){
-            temp_sma5_df <- as.data.frame(cbind(temp_sma5_df,t(round(colMeans(temp_aggregate),4))))
-            if(!is.null(SMA5_df)){
-              SMA5_df <- as.data.frame(rbind(SMA5_df,temp_sma5_df))
-            }else{
-              SMA5_df <- as.data.frame(temp_sma5_df)
-            }
-            if(temp_ticker_i %% 1000 == 0){
-              timestamp()
-              print(paste0("SMA5 calculated for ",temp_ticker_i," tickers"))
-            }
-          }else{
-            failed_tickers <- c(failed_tickers,temp_ticker)
-          }
-        }
-      }
-      sub_tickers <- sub_tickers[!(sub_tickers %in% temp_tickers)]
-      print(paste0("SMA5 calculated for ",length(temp_tickers)," tickers"))
-      failed_tickers <- c(sub_tickers,failed_tickers)
-      print(paste0("Insufficient SMA5 data for ",length(failed_tickers)," tickers"))
-    }else{
-      print(paste0("Insufficient EMA5 or SMA5 data for ",length(sub_tickers)," tickers"))
-    }
-    
-    sub_aggregate <- full_aggregate[full_aggregate$option_quote_date == new_date,]
-    sub_tickers <- unique(sub_aggregate$option_underlying_ticker)
-    if(!is.null(EMA10_df)){
-      temp_tickers <- sub_tickers[sub_tickers %in% temp_EMA10_tickers]
-      temp_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker %in% temp_tickers,]
-      temp_aggregate <- temp_aggregate[order(temp_aggregate$option_underlying_ticker),]
-      temp_ema10_cols <- temp_aggregate[,c("option_underlying_ticker","option_quote_date")]
-      temp_aggregate <- temp_aggregate[,!(colnames(temp_aggregate) %in% c("option_underlying_ticker","option_quote_date"))]
-      temp_ema10_df <- EMA10_df[EMA10_df$option_quote_date == all_dates[(length(all_dates)-1)],]
-      temp_ema10_df <- temp_ema10_df[temp_ema10_df$option_underlying_ticker %in% temp_tickers,]
-      temp_ema10_df <- temp_ema10_df[order(temp_ema10_df$option_underlying_ticker),]
-      temp_ema10_df <- temp_ema10_df[,!(colnames(temp_ema10_df) %in% c("option_underlying_ticker","option_quote_date"))]
-      if(nrow(temp_aggregate) == nrow(temp_ema10_df)){
-        temp_ema10 <- (temp_aggregate) * (2/11) + (temp_ema10_df) * (1 - (2/11))
-        temp_ema10 <- as.data.frame(cbind(temp_ema10_cols,round(temp_ema10,2)))
-        EMA10_df <- as.data.frame(rbind(EMA10_df,temp_ema10))
-        sub_tickers <- sub_tickers[!(sub_tickers %in% temp_EMA10_tickers)]
-        print(paste0("EMA10 calculated from prior EMA for ",length(temp_tickers)," tickers"))
-      }else(
-        print(paste0("Error with EMA10 calculation for ", new_date))
-      )
-    }
-    if(!is.null(SMA10_df)){
-      temp_tickers <- sub_tickers[sub_tickers %in% temp_SMA10_tickers]
-      temp_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker %in% temp_tickers,]
-      temp_aggregate <- temp_aggregate[order(temp_aggregate$option_underlying_ticker),]
-      temp_ema10_cols <- temp_aggregate[,c("option_underlying_ticker","option_quote_date")]
-      temp_aggregate <- temp_aggregate[,!(colnames(temp_aggregate) %in% c("option_underlying_ticker","option_quote_date"))]
-      temp_sma10_df <- SMA10_df[SMA10_df$option_quote_date == all_dates[(length(all_dates)-1)],]
-      temp_sma10_df <- temp_sma10_df[temp_sma10_df$option_underlying_ticker %in% temp_tickers,]
-      temp_sma10_df <- temp_sma10_df[order(temp_sma10_df$option_underlying_ticker),]
-      temp_sma10_df <- temp_sma10_df[,!(colnames(temp_sma10_df) %in% c("option_underlying_ticker","option_quote_date"))]
-      if(nrow(temp_aggregate) == nrow(temp_sma10_df)){
-        temp_ema10 <- (temp_aggregate) * (2/11) + (temp_sma10_df) * (1 - (2/11))
-        temp_ema10 <- as.data.frame(cbind(temp_ema10_cols,round(temp_ema10,2)))
-        if(!is.null(EMA10_df)){
-          EMA10_df <- as.data.frame(rbind(EMA10_df,temp_ema10))
-        }else{
-          EMA10_df <- as.data.frame(temp_ema10)
-        }
-        sub_tickers <- sub_tickers[!(sub_tickers %in% temp_SMA10_tickers)]
-        print(paste0("EMA10 calculated from prior SMA for ",length(temp_tickers)," tickers"))
-      }else(
-        print(paste0("Error with SMA10 calculation for ", new_date))
-      )
-    }
-    if(length(all_dates) >= 10){
-      check_dates <- all_dates[(length(all_dates)-9):length(all_dates)]
-      sub_aggregate <- full_aggregate[full_aggregate$option_quote_date %in% check_dates,]
-      sub_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker %in% sub_tickers,]
-      sub_aggregate <- sub_aggregate[order(sub_aggregate$option_underlying_ticker),]
-      temp_tickers <- sub_tickers[sub_tickers %in% sub_aggregate$option_underlying_ticker]
-      failed_tickers <- c()
-      if(length(temp_tickers) > 0){
-        if(length(temp_tickers) > 1000){
-          print(paste0("Expect long run time for this date due to high number of SMA10 calculations"))
-          timestamp()
-        }
-        for(temp_ticker_i in 1:length(temp_tickers)){
-          temp_ticker <- temp_tickers[temp_ticker_i]
-          temp_sma10_df <- data.frame(option_underlying_ticker=temp_ticker,option_quote_date=new_date)
-          temp_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker == temp_ticker,]
-          temp_aggregate <- temp_aggregate[,!(colnames(sub_aggregate) %in% c("option_underlying_ticker","option_quote_date"))]
-          if(nrow(temp_aggregate) == 10){
-            temp_sma10_df <- as.data.frame(cbind(temp_sma10_df,t(round(colMeans(temp_aggregate),4))))
-            if(!is.null(SMA10_df)){
-              SMA10_df <- as.data.frame(rbind(SMA10_df,temp_sma10_df))
-            }else{
-              SMA10_df <- as.data.frame(temp_sma10_df)
-            }
-            if(temp_ticker_i %% 1000 == 0){
-              timestamp()
-              print(paste0("SMA10 calculated for ",temp_ticker_i," tickers"))
-            }
-          }else{
-            failed_tickers <- c(failed_tickers,temp_ticker)
-          }
-        }
-      }
-      sub_tickers <- sub_tickers[!(sub_tickers %in% temp_tickers)]
-      print(paste0("SMA10 calculated for ",length(temp_tickers)," tickers"))
-      failed_tickers <- c(sub_tickers,failed_tickers)
-      print(paste0("Insufficient SMA10 data for ",length(failed_tickers)," tickers"))
-    }else{
-      print(paste0("Insufficient EMA10 or SMA10 data for ",length(sub_tickers)," tickers"))
-    }
-    
-    sub_aggregate <- full_aggregate[full_aggregate$option_quote_date == new_date,]
-    sub_tickers <- unique(sub_aggregate$option_underlying_ticker)
-    if(!is.null(EMA20_df)){
-      temp_tickers <- sub_tickers[sub_tickers %in% temp_EMA20_tickers]
-      temp_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker %in% temp_tickers,]
-      temp_aggregate <- temp_aggregate[order(temp_aggregate$option_underlying_ticker),]
-      temp_ema20_cols <- temp_aggregate[,c("option_underlying_ticker","option_quote_date")]
-      temp_aggregate <- temp_aggregate[,!(colnames(temp_aggregate) %in% c("option_underlying_ticker","option_quote_date"))]
-      temp_ema20_df <- EMA20_df[EMA20_df$option_quote_date == all_dates[(length(all_dates)-1)],]
-      temp_ema20_df <- temp_ema20_df[temp_ema20_df$option_underlying_ticker %in% temp_tickers,]
-      temp_ema20_df <- temp_ema20_df[order(temp_ema20_df$option_underlying_ticker),]
-      temp_ema20_df <- temp_ema20_df[,!(colnames(temp_ema20_df) %in% c("option_underlying_ticker","option_quote_date"))]
-      if(nrow(temp_aggregate) == nrow(temp_ema20_df)){
-        temp_ema20 <- (temp_aggregate) * (2/21) + (temp_ema20_df) * (1 - (2/21))
-        temp_ema20 <- as.data.frame(cbind(temp_ema20_cols,round(temp_ema20,2)))
-        EMA20_df <- as.data.frame(rbind(EMA20_df,temp_ema20))
-        sub_tickers <- sub_tickers[!(sub_tickers %in% temp_EMA20_tickers)]
-        print(paste0("EMA20 calculated from prior EMA for ",length(temp_tickers)," tickers"))
-      }else(
-        print(paste0("Error with EMA20 calculation for ", new_date))
-      )
-    }
-    if(!is.null(SMA20_df)){
-      temp_tickers <- sub_tickers[sub_tickers %in% temp_SMA20_tickers]
-      temp_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker %in% temp_tickers,]
-      temp_aggregate <- temp_aggregate[order(temp_aggregate$option_underlying_ticker),]
-      temp_ema20_cols <- temp_aggregate[,c("option_underlying_ticker","option_quote_date")]
-      temp_aggregate <- temp_aggregate[,!(colnames(temp_aggregate) %in% c("option_underlying_ticker","option_quote_date"))]
-      temp_sma20_df <- SMA20_df[SMA20_df$option_quote_date == all_dates[(length(all_dates)-1)],]
-      temp_sma20_df <- temp_sma20_df[temp_sma20_df$option_underlying_ticker %in% temp_tickers,]
-      temp_sma20_df <- temp_sma20_df[order(temp_sma20_df$option_underlying_ticker),]
-      temp_sma20_df <- temp_sma20_df[,!(colnames(temp_sma20_df) %in% c("option_underlying_ticker","option_quote_date"))]
-      if(nrow(temp_aggregate) == nrow(temp_sma20_df)){
-        temp_ema20 <- (temp_aggregate) * (2/21) + (temp_sma20_df) * (1 - (2/21))
-        temp_ema20 <- as.data.frame(cbind(temp_ema20_cols,round(temp_ema20,2)))
-        if(!is.null(EMA20_df)){
-          EMA20_df <- as.data.frame(rbind(EMA20_df,temp_ema20))
-        }else{
-          EMA20_df <- as.data.frame(temp_ema20)
-        }
-        sub_tickers <- sub_tickers[!(sub_tickers %in% temp_SMA20_tickers)]
-        print(paste0("EMA20 calculated from prior SMA for ",length(temp_tickers)," tickers"))
-      }else(
-        print(paste0("Error with SMA20 calculation for ", new_date))
-      )
-    }
-    if(length(all_dates) >= 20){
-      check_dates <- all_dates[(length(all_dates)-19):length(all_dates)]
-      sub_aggregate <- full_aggregate[full_aggregate$option_quote_date %in% check_dates,]
-      sub_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker %in% sub_tickers,]
-      sub_aggregate <- sub_aggregate[order(sub_aggregate$option_underlying_ticker),]
-      temp_tickers <- sub_tickers[sub_tickers %in% sub_aggregate$option_underlying_ticker]
-      failed_tickers <- c()
-      if(length(temp_tickers) > 0){
-        if(length(temp_tickers) > 1000){
-          print(paste0("Expect long run time for this date due to high number of SMA20 calculations"))
-          timestamp()
-        }
-        for(temp_ticker_i in 1:length(temp_tickers)){
-          temp_ticker <- temp_tickers[temp_ticker_i]
-          temp_sma20_df <- data.frame(option_underlying_ticker=temp_ticker,option_quote_date=new_date)
-          temp_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker == temp_ticker,]
-          temp_aggregate <- temp_aggregate[,!(colnames(sub_aggregate) %in% c("option_underlying_ticker","option_quote_date"))]
-          if(nrow(temp_aggregate) == 20){
-            temp_sma20_df <- as.data.frame(cbind(temp_sma20_df,t(round(colMeans(temp_aggregate),4))))
-            if(!is.null(SMA20_df)){
-              SMA20_df <- as.data.frame(rbind(SMA20_df,temp_sma20_df))
-            }else{
-              SMA20_df <- as.data.frame(temp_sma20_df)
-            }
-            if(temp_ticker_i %% 1000 == 0){
-              timestamp()
-              print(paste0("SMA20 calculated for ",temp_ticker_i," tickers"))
-            }
-          }else{
-            failed_tickers <- c(failed_tickers,temp_ticker)
-          }
-        }
-      }
-      sub_tickers <- sub_tickers[!(sub_tickers %in% temp_tickers)]
-      print(paste0("SMA20 calculated for ",length(temp_tickers)," tickers"))
-      failed_tickers <- c(sub_tickers,failed_tickers)
-      print(paste0("Insufficient SMA20 data for ",length(failed_tickers)," tickers"))
-    }else{
-      print(paste0("Insufficient EMA20 or SMA20 data for ",length(sub_tickers)," tickers"))
-    }
-    
-    sub_aggregate <- full_aggregate[full_aggregate$option_quote_date == new_date,]
-    sub_tickers <- unique(sub_aggregate$option_underlying_ticker)
-    if(!is.null(EMA50_df)){
-      temp_tickers <- sub_tickers[sub_tickers %in% temp_EMA50_tickers]
-      temp_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker %in% temp_tickers,]
-      temp_aggregate <- temp_aggregate[order(temp_aggregate$option_underlying_ticker),]
-      temp_ema50_cols <- temp_aggregate[,c("option_underlying_ticker","option_quote_date")]
-      temp_aggregate <- temp_aggregate[,!(colnames(temp_aggregate) %in% c("option_underlying_ticker","option_quote_date"))]
-      temp_ema50_df <- EMA50_df[EMA50_df$option_quote_date == all_dates[(length(all_dates)-1)],]
-      temp_ema50_df <- temp_ema50_df[temp_ema50_df$option_underlying_ticker %in% temp_tickers,]
-      temp_ema50_df <- temp_ema50_df[order(temp_ema50_df$option_underlying_ticker),]
-      temp_ema50_df <- temp_ema50_df[,!(colnames(temp_ema50_df) %in% c("option_underlying_ticker","option_quote_date"))]
-      if(nrow(temp_aggregate) == nrow(temp_ema50_df)){
-        temp_ema50 <- (temp_aggregate) * (2/51) + (temp_ema50_df) * (1 - (2/51))
-        temp_ema50 <- as.data.frame(cbind(temp_ema50_cols,round(temp_ema50,2)))
-        EMA50_df <- as.data.frame(rbind(EMA50_df,temp_ema50))
-        sub_tickers <- sub_tickers[!(sub_tickers %in% temp_EMA50_tickers)]
-        print(paste0("EMA50 calculated from prior EMA for ",length(temp_tickers)," tickers"))
-      }else(
-        print(paste0("Error with EMA50 calculation for ", new_date))
-      )
-    }
-    if(!is.null(SMA50_df)){
-      temp_tickers <- sub_tickers[sub_tickers %in% temp_SMA50_tickers]
-      temp_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker %in% temp_tickers,]
-      temp_aggregate <- temp_aggregate[order(temp_aggregate$option_underlying_ticker),]
-      temp_ema50_cols <- temp_aggregate[,c("option_underlying_ticker","option_quote_date")]
-      temp_aggregate <- temp_aggregate[,!(colnames(temp_aggregate) %in% c("option_underlying_ticker","option_quote_date"))]
-      temp_sma50_df <- SMA50_df[SMA50_df$option_quote_date == all_dates[(length(all_dates)-1)],]
-      temp_sma50_df <- temp_sma50_df[temp_sma50_df$option_underlying_ticker %in% temp_tickers,]
-      temp_sma50_df <- temp_sma50_df[order(temp_sma50_df$option_underlying_ticker),]
-      temp_sma50_df <- temp_sma50_df[,!(colnames(temp_sma50_df) %in% c("option_underlying_ticker","option_quote_date"))]
-      if(nrow(temp_aggregate) == nrow(temp_sma50_df)){
-        temp_ema50 <- (temp_aggregate) * (2/51) + (temp_sma50_df) * (1 - (2/51))
-        temp_ema50 <- as.data.frame(cbind(temp_ema50_cols,round(temp_ema50,2)))
-        if(!is.null(EMA50_df)){
-          EMA50_df <- as.data.frame(rbind(EMA50_df,temp_ema50))
-        }else{
-          EMA50_df <- as.data.frame(temp_ema50)
-        }
-        sub_tickers <- sub_tickers[!(sub_tickers %in% temp_SMA50_tickers)]
-        print(paste0("EMA50 calculated from prior SMA for ",length(temp_tickers)," tickers"))
-      }else(
-        print(paste0("Error with SMA50 calculation for ", new_date))
-      )
-    }
-    if(length(all_dates) >= 50){
-      check_dates <- all_dates[(length(all_dates)-49):length(all_dates)]
-      sub_aggregate <- full_aggregate[full_aggregate$option_quote_date %in% check_dates,]
-      sub_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker %in% sub_tickers,]
-      sub_aggregate <- sub_aggregate[order(sub_aggregate$option_underlying_ticker),]
-      temp_tickers <- sub_tickers[sub_tickers %in% sub_aggregate$option_underlying_ticker]
-      failed_tickers <- c()
-      if(length(temp_tickers) > 0){
-        if(length(temp_tickers) > 1000){
-          print(paste0("Expect long run time for this date due to high number of SMA50 calculations"))
-          timestamp()
-        }
-        for(temp_ticker_i in 1:length(temp_tickers)){
-          temp_ticker <- temp_tickers[temp_ticker_i]
-          temp_sma50_df <- data.frame(option_underlying_ticker=temp_ticker,option_quote_date=new_date)
-          temp_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker == temp_ticker,]
-          temp_aggregate <- temp_aggregate[,!(colnames(sub_aggregate) %in% c("option_underlying_ticker","option_quote_date"))]
-          if(nrow(temp_aggregate) == 50){
-            temp_sma50_df <- as.data.frame(cbind(temp_sma50_df,t(round(colMeans(temp_aggregate),4))))
-            if(!is.null(SMA50_df)){
-              SMA50_df <- as.data.frame(rbind(SMA50_df,temp_sma50_df))
-            }else{
-              SMA50_df <- as.data.frame(temp_sma50_df)
-            }
-            if(temp_ticker_i %% 1000 == 0){
-              timestamp()
-              print(paste0("SMA50 calculated for ",temp_ticker_i," tickers"))
-            }
-          }else{
-            failed_tickers <- c(failed_tickers,temp_ticker)
-          }
-        }
-      }
-      sub_tickers <- sub_tickers[!(sub_tickers %in% temp_tickers)]
-      print(paste0("SMA50 calculated for ",length(temp_tickers)," tickers"))
-      failed_tickers <- c(sub_tickers,failed_tickers)
-      print(paste0("Insufficient SMA50 data for ",length(failed_tickers)," tickers"))
-    }else{
-      print(paste0("Insufficient EMA50 or SMA50 data for ",length(sub_tickers)," tickers"))
-    }
-    print(paste0("Finished EMA calculations for ",new_date))
-    
-    ##Save data and reset objects while retaining values for continued EMA and SMA calculation
-    if(length(added_dates) %% 100 == 0){
-      if(is.null(last_date)){
-        temp_start_date <- min(added_dates)
+      if(is.null(all_dates)){
+        all_dates <- new_date
       }else{
-        temp_start_date <- min(added_dates[added_dates > last_date])
+        all_dates <- c(all_dates,new_date)
       }
-      temp_end_date <- max(added_dates)
-      temp_base_path <- "E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/"
-      saveRDS(full_aggregate[full_aggregate$option_quote_date >= temp_start_date &
-                                        full_aggregate$option_quote_date <= temp_end_date,],
-              file=paste0(temp_base_path,"full_option_aggregate_",
-                          temp_start_date,"_to_",temp_end_date,".RDS"))
-      saveRDS(SMA5_df[SMA5_df$option_quote_date >= temp_start_date &
-                                        SMA5_df$option_quote_date <= temp_end_date,],
-              file=paste0(temp_base_path,"SMA5_aggregate_",
-                          temp_start_date,"_to_",temp_end_date,".RDS"))
-      saveRDS(SMA10_df[SMA10_df$option_quote_date >= temp_start_date &
-                                        SMA10_df$option_quote_date <= temp_end_date,],
-              file=paste0(temp_base_path,"SMA10_aggregate_",
-                          temp_start_date,"_to_",temp_end_date,".RDS"))
-      saveRDS(SMA20_df[SMA20_df$option_quote_date >= temp_start_date &
-                                        SMA20_df$option_quote_date <= temp_end_date,],
-              file=paste0(temp_base_path,"SMA20_aggregate_",
-                          temp_start_date,"_to_",temp_end_date,".RDS"))
-      saveRDS(SMA50_df[SMA50_df$option_quote_date >= temp_start_date &
-                                        SMA50_df$option_quote_date <= temp_end_date,],
-              file=paste0(temp_base_path,"SMA50_aggregate_",
-                          temp_start_date,"_to_",temp_end_date,".RDS"))
-      saveRDS(EMA5_df[EMA5_df$option_quote_date >= temp_start_date &
-                                        EMA5_df$option_quote_date <= temp_end_date,],
-              file=paste0(temp_base_path,"EMA5_aggregate_",
-                          temp_start_date,"_to_",temp_end_date,".RDS"))
-      saveRDS(EMA10_df[EMA10_df$option_quote_date >= temp_start_date &
-                                        EMA10_df$option_quote_date <= temp_end_date,],
-              file=paste0(temp_base_path,"EMA10_aggregate_",
-                          temp_start_date,"_to_",temp_end_date,".RDS"))
-      saveRDS(EMA20_df[EMA20_df$option_quote_date >= temp_start_date &
-                                        EMA20_df$option_quote_date <= temp_end_date,],
-              file=paste0(temp_base_path,"EMA20_aggregate_",
-                          temp_start_date,"_to_",temp_end_date,".RDS"))
-      saveRDS(EMA50_df[EMA50_df$option_quote_date >= temp_start_date &
-                                        EMA50_df$option_quote_date <= temp_end_date,],
-              file=paste0(temp_base_path,"EMA50_aggregate_",
-                          temp_start_date,"_to_",temp_end_date,".RDS"))
-      dates_to_keep <- added_dates[(length(added_dates)-49):length(added_dates)]
-      new_start_date <- min(dates_to_keep)
-      new_end_date <- max(dates_to_keep)
-      last_date <- new_end_date
-      ##Update objects after save with dates to keep
-      full_aggregate <- full_aggregate[full_aggregate$option_quote_date >= new_start_date &
-                                        full_aggregate$option_quote_date <= new_end_date,]
-      SMA5_df <- SMA5_df[SMA5_df$option_quote_date >= new_start_date &
-                                        SMA5_df$option_quote_date <= new_end_date,]
-      SMA10_df <- SMA10_df[SMA10_df$option_quote_date >= new_start_date &
-                                        SMA10_df$option_quote_date <= new_end_date,]
-      SMA20_df <- SMA20_df[SMA20_df$option_quote_date >= new_start_date &
-                                        SMA20_df$option_quote_date <= new_end_date,]
-      SMA50_df <- SMA50_df[SMA50_df$option_quote_date >= new_start_date &
-                                        SMA50_df$option_quote_date <= new_end_date,]
-      EMA5_df <- EMA5_df[EMA5_df$option_quote_date >= new_start_date &
-                                        EMA5_df$option_quote_date <= new_end_date,]
-      EMA10_df <- EMA10_df[EMA10_df$option_quote_date >= new_start_date &
-                                        EMA10_df$option_quote_date <= new_end_date,]
-      EMA20_df <- EMA20_df[EMA20_df$option_quote_date >= new_start_date &
-                                        EMA20_df$option_quote_date <= new_end_date,]
-      EMA50_df <- EMA50_df[EMA50_df$option_quote_date >= new_start_date &
-                                        EMA50_df$option_quote_date <= new_end_date,]
+      if(is.null(added_dates)){
+        added_dates <- new_date
+      }else{
+        added_dates <- c(added_dates,new_date)
+      }
+      ##Create full aggregate with volume and open interest and derived values
+      if(is.null(full_aggregate)){
+        full_aggregate <- temp_file
+      }else{
+        full_aggregate <- as.data.frame(rbind(full_aggregate,temp_file))
+      }
+      if(!is.null(EMA5_df)){
+        temp_EMA5_tickers <- EMA5_df$option_underlying_ticker[EMA5_df$option_quote_date == all_dates[(length(all_dates)-1)]]
+      }
+      if(!is.null(SMA5_df)){
+        temp_SMA5_tickers <- SMA5_df$option_underlying_ticker[SMA5_df$option_quote_date == all_dates[(length(all_dates)-1)]]
+      }
+      if(!is.null(EMA10_df)){
+        temp_EMA10_tickers <- EMA10_df$option_underlying_ticker[EMA10_df$option_quote_date == all_dates[(length(all_dates)-1)]]
+      }
+      if(!is.null(SMA10_df)){
+        temp_SMA10_tickers <- SMA10_df$option_underlying_ticker[SMA10_df$option_quote_date == all_dates[(length(all_dates)-1)]]
+      }
+      if(!is.null(EMA20_df)){
+        temp_EMA20_tickers <- EMA20_df$option_underlying_ticker[EMA20_df$option_quote_date == all_dates[(length(all_dates)-1)]]
+      }
+      if(!is.null(SMA20_df)){
+        temp_SMA20_tickers <- SMA20_df$option_underlying_ticker[SMA20_df$option_quote_date == all_dates[(length(all_dates)-1)]]
+      }
+      if(!is.null(EMA50_df)){
+        temp_EMA50_tickers <- EMA50_df$option_underlying_ticker[EMA50_df$option_quote_date == all_dates[(length(all_dates)-1)]]
+      }
+      if(!is.null(SMA50_df)){
+        temp_SMA50_tickers <- SMA50_df$option_underlying_ticker[SMA50_df$option_quote_date == all_dates[(length(all_dates)-1)]]
+      }
+      
+      ##Calculate new EMA5 for all new stocks with prior EMA5
+      sub_aggregate <- full_aggregate[full_aggregate$option_quote_date == new_date,]
+      sub_tickers <- unique(sub_aggregate$option_underlying_ticker)
+      if(!is.null(EMA5_df)){
+        temp_tickers <- sub_tickers[sub_tickers %in% temp_EMA5_tickers]
+        temp_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker %in% temp_tickers,]
+        temp_aggregate <- temp_aggregate[order(temp_aggregate$option_underlying_ticker),]
+        temp_ema5_cols <- temp_aggregate[,c("option_underlying_ticker","option_quote_date")]
+        temp_aggregate <- temp_aggregate[,!(colnames(temp_aggregate) %in% c("option_underlying_ticker","option_quote_date"))]
+        temp_ema5_df <- EMA5_df[EMA5_df$option_quote_date == all_dates[(length(all_dates)-1)],]
+        temp_ema5_df <- temp_ema5_df[temp_ema5_df$option_underlying_ticker %in% temp_tickers,]
+        temp_ema5_df <- temp_ema5_df[order(temp_ema5_df$option_underlying_ticker),]
+        temp_ema5_df <- temp_ema5_df[,!(colnames(temp_ema5_df) %in% c("option_underlying_ticker","option_quote_date"))]
+        if(nrow(temp_aggregate) == nrow(temp_ema5_df)){
+          temp_ema5 <- (temp_aggregate) * (2/6) + (temp_ema5_df) * (1 - (2/6))
+          temp_ema5 <- as.data.frame(cbind(temp_ema5_cols,round(temp_ema5,2)))
+          EMA5_df <- as.data.frame(rbind(EMA5_df,temp_ema5))
+          sub_tickers <- sub_tickers[!(sub_tickers %in% temp_EMA5_tickers)]
+          print(paste0("EMA5 calculated from prior EMA for ",length(temp_tickers)," tickers"))
+        }else(
+          print(paste0("Error with EMA5 calculation for ", new_date))
+        )
+      }
+      if(!is.null(SMA5_df)){
+        temp_tickers <- sub_tickers[sub_tickers %in% temp_SMA5_tickers]
+        temp_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker %in% temp_tickers,]
+        temp_aggregate <- temp_aggregate[order(temp_aggregate$option_underlying_ticker),]
+        temp_ema5_cols <- temp_aggregate[,c("option_underlying_ticker","option_quote_date")]
+        temp_aggregate <- temp_aggregate[,!(colnames(temp_aggregate) %in% c("option_underlying_ticker","option_quote_date"))]
+        temp_sma5_df <- SMA5_df[SMA5_df$option_quote_date == all_dates[(length(all_dates)-1)],]
+        temp_sma5_df <- temp_sma5_df[temp_sma5_df$option_underlying_ticker %in% temp_tickers,]
+        temp_sma5_df <- temp_sma5_df[order(temp_sma5_df$option_underlying_ticker),]
+        temp_sma5_df <- temp_sma5_df[,!(colnames(temp_sma5_df) %in% c("option_underlying_ticker","option_quote_date"))]
+        if(nrow(temp_aggregate) == nrow(temp_sma5_df)){
+          temp_ema5 <- (temp_aggregate) * (2/6) + (temp_sma5_df) * (1 - (2/6))
+          temp_ema5 <- as.data.frame(cbind(temp_ema5_cols,round(temp_ema5,2)))
+          if(!is.null(EMA5_df)){
+            EMA5_df <- as.data.frame(rbind(EMA5_df,temp_ema5))
+          }else{
+            EMA5_df <- as.data.frame(temp_ema5)
+          }
+          sub_tickers <- sub_tickers[!(sub_tickers %in% temp_SMA5_tickers)]
+          print(paste0("EMA5 calculated from prior SMA for ",length(temp_tickers)," tickers"))
+        }else(
+          print(paste0("Error with SMA5 calculation for ", new_date))
+        )
+      }
+      if(length(all_dates) >= 5){
+        check_dates <- all_dates[(length(all_dates)-4):length(all_dates)]
+        sub_aggregate <- full_aggregate[full_aggregate$option_quote_date %in% check_dates,]
+        sub_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker %in% sub_tickers,]
+        sub_aggregate <- sub_aggregate[order(sub_aggregate$option_underlying_ticker),]
+        temp_tickers <- sub_tickers[sub_tickers %in% sub_aggregate$option_underlying_ticker]
+        failed_tickers <- c()
+        if(length(temp_tickers) > 0){
+          if(length(temp_tickers) > 1000){
+            print(paste0("Expect long run time for this date due to high number of SMA5 calculations"))
+            timestamp()
+          }
+          for(temp_ticker_i in 1:length(temp_tickers)){
+            temp_ticker <- temp_tickers[temp_ticker_i]
+            temp_sma5_df <- data.frame(option_underlying_ticker=temp_ticker,option_quote_date=new_date)
+            temp_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker == temp_ticker,]
+            temp_aggregate <- temp_aggregate[,!(colnames(sub_aggregate) %in% c("option_underlying_ticker","option_quote_date"))]
+            if(nrow(temp_aggregate) == 5){
+              temp_sma5_df <- as.data.frame(cbind(temp_sma5_df,t(round(colMeans(temp_aggregate),4))))
+              if(!is.null(SMA5_df)){
+                SMA5_df <- as.data.frame(rbind(SMA5_df,temp_sma5_df))
+              }else{
+                SMA5_df <- as.data.frame(temp_sma5_df)
+              }
+              if(temp_ticker_i %% 1000 == 0){
+                timestamp()
+                print(paste0("SMA5 calculated for ",temp_ticker_i," tickers"))
+              }
+            }else{
+              failed_tickers <- c(failed_tickers,temp_ticker)
+            }
+          }
+        }
+        sub_tickers <- sub_tickers[!(sub_tickers %in% temp_tickers)]
+        print(paste0("SMA5 calculated for ",length(temp_tickers)," tickers"))
+        failed_tickers <- c(sub_tickers,failed_tickers)
+        print(paste0("Insufficient SMA5 data for ",length(failed_tickers)," tickers"))
+      }else{
+        print(paste0("Insufficient EMA5 or SMA5 data for ",length(sub_tickers)," tickers"))
+      }
+      
+      sub_aggregate <- full_aggregate[full_aggregate$option_quote_date == new_date,]
+      sub_tickers <- unique(sub_aggregate$option_underlying_ticker)
+      if(!is.null(EMA10_df)){
+        temp_tickers <- sub_tickers[sub_tickers %in% temp_EMA10_tickers]
+        temp_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker %in% temp_tickers,]
+        temp_aggregate <- temp_aggregate[order(temp_aggregate$option_underlying_ticker),]
+        temp_ema10_cols <- temp_aggregate[,c("option_underlying_ticker","option_quote_date")]
+        temp_aggregate <- temp_aggregate[,!(colnames(temp_aggregate) %in% c("option_underlying_ticker","option_quote_date"))]
+        temp_ema10_df <- EMA10_df[EMA10_df$option_quote_date == all_dates[(length(all_dates)-1)],]
+        temp_ema10_df <- temp_ema10_df[temp_ema10_df$option_underlying_ticker %in% temp_tickers,]
+        temp_ema10_df <- temp_ema10_df[order(temp_ema10_df$option_underlying_ticker),]
+        temp_ema10_df <- temp_ema10_df[,!(colnames(temp_ema10_df) %in% c("option_underlying_ticker","option_quote_date"))]
+        if(nrow(temp_aggregate) == nrow(temp_ema10_df)){
+          temp_ema10 <- (temp_aggregate) * (2/11) + (temp_ema10_df) * (1 - (2/11))
+          temp_ema10 <- as.data.frame(cbind(temp_ema10_cols,round(temp_ema10,2)))
+          EMA10_df <- as.data.frame(rbind(EMA10_df,temp_ema10))
+          sub_tickers <- sub_tickers[!(sub_tickers %in% temp_EMA10_tickers)]
+          print(paste0("EMA10 calculated from prior EMA for ",length(temp_tickers)," tickers"))
+        }else(
+          print(paste0("Error with EMA10 calculation for ", new_date))
+        )
+      }
+      if(!is.null(SMA10_df)){
+        temp_tickers <- sub_tickers[sub_tickers %in% temp_SMA10_tickers]
+        temp_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker %in% temp_tickers,]
+        temp_aggregate <- temp_aggregate[order(temp_aggregate$option_underlying_ticker),]
+        temp_ema10_cols <- temp_aggregate[,c("option_underlying_ticker","option_quote_date")]
+        temp_aggregate <- temp_aggregate[,!(colnames(temp_aggregate) %in% c("option_underlying_ticker","option_quote_date"))]
+        temp_sma10_df <- SMA10_df[SMA10_df$option_quote_date == all_dates[(length(all_dates)-1)],]
+        temp_sma10_df <- temp_sma10_df[temp_sma10_df$option_underlying_ticker %in% temp_tickers,]
+        temp_sma10_df <- temp_sma10_df[order(temp_sma10_df$option_underlying_ticker),]
+        temp_sma10_df <- temp_sma10_df[,!(colnames(temp_sma10_df) %in% c("option_underlying_ticker","option_quote_date"))]
+        if(nrow(temp_aggregate) == nrow(temp_sma10_df)){
+          temp_ema10 <- (temp_aggregate) * (2/11) + (temp_sma10_df) * (1 - (2/11))
+          temp_ema10 <- as.data.frame(cbind(temp_ema10_cols,round(temp_ema10,2)))
+          if(!is.null(EMA10_df)){
+            EMA10_df <- as.data.frame(rbind(EMA10_df,temp_ema10))
+          }else{
+            EMA10_df <- as.data.frame(temp_ema10)
+          }
+          sub_tickers <- sub_tickers[!(sub_tickers %in% temp_SMA10_tickers)]
+          print(paste0("EMA10 calculated from prior SMA for ",length(temp_tickers)," tickers"))
+        }else(
+          print(paste0("Error with SMA10 calculation for ", new_date))
+        )
+      }
+      if(length(all_dates) >= 10){
+        check_dates <- all_dates[(length(all_dates)-9):length(all_dates)]
+        sub_aggregate <- full_aggregate[full_aggregate$option_quote_date %in% check_dates,]
+        sub_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker %in% sub_tickers,]
+        sub_aggregate <- sub_aggregate[order(sub_aggregate$option_underlying_ticker),]
+        temp_tickers <- sub_tickers[sub_tickers %in% sub_aggregate$option_underlying_ticker]
+        failed_tickers <- c()
+        if(length(temp_tickers) > 0){
+          if(length(temp_tickers) > 1000){
+            print(paste0("Expect long run time for this date due to high number of SMA10 calculations"))
+            timestamp()
+          }
+          for(temp_ticker_i in 1:length(temp_tickers)){
+            temp_ticker <- temp_tickers[temp_ticker_i]
+            temp_sma10_df <- data.frame(option_underlying_ticker=temp_ticker,option_quote_date=new_date)
+            temp_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker == temp_ticker,]
+            temp_aggregate <- temp_aggregate[,!(colnames(sub_aggregate) %in% c("option_underlying_ticker","option_quote_date"))]
+            if(nrow(temp_aggregate) == 10){
+              temp_sma10_df <- as.data.frame(cbind(temp_sma10_df,t(round(colMeans(temp_aggregate),4))))
+              if(!is.null(SMA10_df)){
+                SMA10_df <- as.data.frame(rbind(SMA10_df,temp_sma10_df))
+              }else{
+                SMA10_df <- as.data.frame(temp_sma10_df)
+              }
+              if(temp_ticker_i %% 1000 == 0){
+                timestamp()
+                print(paste0("SMA10 calculated for ",temp_ticker_i," tickers"))
+              }
+            }else{
+              failed_tickers <- c(failed_tickers,temp_ticker)
+            }
+          }
+        }
+        sub_tickers <- sub_tickers[!(sub_tickers %in% temp_tickers)]
+        print(paste0("SMA10 calculated for ",length(temp_tickers)," tickers"))
+        failed_tickers <- c(sub_tickers,failed_tickers)
+        print(paste0("Insufficient SMA10 data for ",length(failed_tickers)," tickers"))
+      }else{
+        print(paste0("Insufficient EMA10 or SMA10 data for ",length(sub_tickers)," tickers"))
+      }
+      
+      sub_aggregate <- full_aggregate[full_aggregate$option_quote_date == new_date,]
+      sub_tickers <- unique(sub_aggregate$option_underlying_ticker)
+      if(!is.null(EMA20_df)){
+        temp_tickers <- sub_tickers[sub_tickers %in% temp_EMA20_tickers]
+        temp_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker %in% temp_tickers,]
+        temp_aggregate <- temp_aggregate[order(temp_aggregate$option_underlying_ticker),]
+        temp_ema20_cols <- temp_aggregate[,c("option_underlying_ticker","option_quote_date")]
+        temp_aggregate <- temp_aggregate[,!(colnames(temp_aggregate) %in% c("option_underlying_ticker","option_quote_date"))]
+        temp_ema20_df <- EMA20_df[EMA20_df$option_quote_date == all_dates[(length(all_dates)-1)],]
+        temp_ema20_df <- temp_ema20_df[temp_ema20_df$option_underlying_ticker %in% temp_tickers,]
+        temp_ema20_df <- temp_ema20_df[order(temp_ema20_df$option_underlying_ticker),]
+        temp_ema20_df <- temp_ema20_df[,!(colnames(temp_ema20_df) %in% c("option_underlying_ticker","option_quote_date"))]
+        if(nrow(temp_aggregate) == nrow(temp_ema20_df)){
+          temp_ema20 <- (temp_aggregate) * (2/21) + (temp_ema20_df) * (1 - (2/21))
+          temp_ema20 <- as.data.frame(cbind(temp_ema20_cols,round(temp_ema20,2)))
+          EMA20_df <- as.data.frame(rbind(EMA20_df,temp_ema20))
+          sub_tickers <- sub_tickers[!(sub_tickers %in% temp_EMA20_tickers)]
+          print(paste0("EMA20 calculated from prior EMA for ",length(temp_tickers)," tickers"))
+        }else(
+          print(paste0("Error with EMA20 calculation for ", new_date))
+        )
+      }
+      if(!is.null(SMA20_df)){
+        temp_tickers <- sub_tickers[sub_tickers %in% temp_SMA20_tickers]
+        temp_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker %in% temp_tickers,]
+        temp_aggregate <- temp_aggregate[order(temp_aggregate$option_underlying_ticker),]
+        temp_ema20_cols <- temp_aggregate[,c("option_underlying_ticker","option_quote_date")]
+        temp_aggregate <- temp_aggregate[,!(colnames(temp_aggregate) %in% c("option_underlying_ticker","option_quote_date"))]
+        temp_sma20_df <- SMA20_df[SMA20_df$option_quote_date == all_dates[(length(all_dates)-1)],]
+        temp_sma20_df <- temp_sma20_df[temp_sma20_df$option_underlying_ticker %in% temp_tickers,]
+        temp_sma20_df <- temp_sma20_df[order(temp_sma20_df$option_underlying_ticker),]
+        temp_sma20_df <- temp_sma20_df[,!(colnames(temp_sma20_df) %in% c("option_underlying_ticker","option_quote_date"))]
+        if(nrow(temp_aggregate) == nrow(temp_sma20_df)){
+          temp_ema20 <- (temp_aggregate) * (2/21) + (temp_sma20_df) * (1 - (2/21))
+          temp_ema20 <- as.data.frame(cbind(temp_ema20_cols,round(temp_ema20,2)))
+          if(!is.null(EMA20_df)){
+            EMA20_df <- as.data.frame(rbind(EMA20_df,temp_ema20))
+          }else{
+            EMA20_df <- as.data.frame(temp_ema20)
+          }
+          sub_tickers <- sub_tickers[!(sub_tickers %in% temp_SMA20_tickers)]
+          print(paste0("EMA20 calculated from prior SMA for ",length(temp_tickers)," tickers"))
+        }else(
+          print(paste0("Error with SMA20 calculation for ", new_date))
+        )
+      }
+      if(length(all_dates) >= 20){
+        check_dates <- all_dates[(length(all_dates)-19):length(all_dates)]
+        sub_aggregate <- full_aggregate[full_aggregate$option_quote_date %in% check_dates,]
+        sub_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker %in% sub_tickers,]
+        sub_aggregate <- sub_aggregate[order(sub_aggregate$option_underlying_ticker),]
+        temp_tickers <- sub_tickers[sub_tickers %in% sub_aggregate$option_underlying_ticker]
+        failed_tickers <- c()
+        if(length(temp_tickers) > 0){
+          if(length(temp_tickers) > 1000){
+            print(paste0("Expect long run time for this date due to high number of SMA20 calculations"))
+            timestamp()
+          }
+          for(temp_ticker_i in 1:length(temp_tickers)){
+            temp_ticker <- temp_tickers[temp_ticker_i]
+            temp_sma20_df <- data.frame(option_underlying_ticker=temp_ticker,option_quote_date=new_date)
+            temp_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker == temp_ticker,]
+            temp_aggregate <- temp_aggregate[,!(colnames(sub_aggregate) %in% c("option_underlying_ticker","option_quote_date"))]
+            if(nrow(temp_aggregate) == 20){
+              temp_sma20_df <- as.data.frame(cbind(temp_sma20_df,t(round(colMeans(temp_aggregate),4))))
+              if(!is.null(SMA20_df)){
+                SMA20_df <- as.data.frame(rbind(SMA20_df,temp_sma20_df))
+              }else{
+                SMA20_df <- as.data.frame(temp_sma20_df)
+              }
+              if(temp_ticker_i %% 1000 == 0){
+                timestamp()
+                print(paste0("SMA20 calculated for ",temp_ticker_i," tickers"))
+              }
+            }else{
+              failed_tickers <- c(failed_tickers,temp_ticker)
+            }
+          }
+        }
+        sub_tickers <- sub_tickers[!(sub_tickers %in% temp_tickers)]
+        print(paste0("SMA20 calculated for ",length(temp_tickers)," tickers"))
+        failed_tickers <- c(sub_tickers,failed_tickers)
+        print(paste0("Insufficient SMA20 data for ",length(failed_tickers)," tickers"))
+      }else{
+        print(paste0("Insufficient EMA20 or SMA20 data for ",length(sub_tickers)," tickers"))
+      }
+      
+      sub_aggregate <- full_aggregate[full_aggregate$option_quote_date == new_date,]
+      sub_tickers <- unique(sub_aggregate$option_underlying_ticker)
+      if(!is.null(EMA50_df)){
+        temp_tickers <- sub_tickers[sub_tickers %in% temp_EMA50_tickers]
+        temp_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker %in% temp_tickers,]
+        temp_aggregate <- temp_aggregate[order(temp_aggregate$option_underlying_ticker),]
+        temp_ema50_cols <- temp_aggregate[,c("option_underlying_ticker","option_quote_date")]
+        temp_aggregate <- temp_aggregate[,!(colnames(temp_aggregate) %in% c("option_underlying_ticker","option_quote_date"))]
+        temp_ema50_df <- EMA50_df[EMA50_df$option_quote_date == all_dates[(length(all_dates)-1)],]
+        temp_ema50_df <- temp_ema50_df[temp_ema50_df$option_underlying_ticker %in% temp_tickers,]
+        temp_ema50_df <- temp_ema50_df[order(temp_ema50_df$option_underlying_ticker),]
+        temp_ema50_df <- temp_ema50_df[,!(colnames(temp_ema50_df) %in% c("option_underlying_ticker","option_quote_date"))]
+        if(nrow(temp_aggregate) == nrow(temp_ema50_df)){
+          temp_ema50 <- (temp_aggregate) * (2/51) + (temp_ema50_df) * (1 - (2/51))
+          temp_ema50 <- as.data.frame(cbind(temp_ema50_cols,round(temp_ema50,2)))
+          EMA50_df <- as.data.frame(rbind(EMA50_df,temp_ema50))
+          sub_tickers <- sub_tickers[!(sub_tickers %in% temp_EMA50_tickers)]
+          print(paste0("EMA50 calculated from prior EMA for ",length(temp_tickers)," tickers"))
+        }else(
+          print(paste0("Error with EMA50 calculation for ", new_date))
+        )
+      }
+      if(!is.null(SMA50_df)){
+        temp_tickers <- sub_tickers[sub_tickers %in% temp_SMA50_tickers]
+        temp_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker %in% temp_tickers,]
+        temp_aggregate <- temp_aggregate[order(temp_aggregate$option_underlying_ticker),]
+        temp_ema50_cols <- temp_aggregate[,c("option_underlying_ticker","option_quote_date")]
+        temp_aggregate <- temp_aggregate[,!(colnames(temp_aggregate) %in% c("option_underlying_ticker","option_quote_date"))]
+        temp_sma50_df <- SMA50_df[SMA50_df$option_quote_date == all_dates[(length(all_dates)-1)],]
+        temp_sma50_df <- temp_sma50_df[temp_sma50_df$option_underlying_ticker %in% temp_tickers,]
+        temp_sma50_df <- temp_sma50_df[order(temp_sma50_df$option_underlying_ticker),]
+        temp_sma50_df <- temp_sma50_df[,!(colnames(temp_sma50_df) %in% c("option_underlying_ticker","option_quote_date"))]
+        if(nrow(temp_aggregate) == nrow(temp_sma50_df)){
+          temp_ema50 <- (temp_aggregate) * (2/51) + (temp_sma50_df) * (1 - (2/51))
+          temp_ema50 <- as.data.frame(cbind(temp_ema50_cols,round(temp_ema50,2)))
+          if(!is.null(EMA50_df)){
+            EMA50_df <- as.data.frame(rbind(EMA50_df,temp_ema50))
+          }else{
+            EMA50_df <- as.data.frame(temp_ema50)
+          }
+          sub_tickers <- sub_tickers[!(sub_tickers %in% temp_SMA50_tickers)]
+          print(paste0("EMA50 calculated from prior SMA for ",length(temp_tickers)," tickers"))
+        }else(
+          print(paste0("Error with SMA50 calculation for ", new_date))
+        )
+      }
+      if(length(all_dates) >= 50){
+        check_dates <- all_dates[(length(all_dates)-49):length(all_dates)]
+        sub_aggregate <- full_aggregate[full_aggregate$option_quote_date %in% check_dates,]
+        sub_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker %in% sub_tickers,]
+        sub_aggregate <- sub_aggregate[order(sub_aggregate$option_underlying_ticker),]
+        temp_tickers <- sub_tickers[sub_tickers %in% sub_aggregate$option_underlying_ticker]
+        failed_tickers <- c()
+        if(length(temp_tickers) > 0){
+          if(length(temp_tickers) > 1000){
+            print(paste0("Expect long run time for this date due to high number of SMA50 calculations"))
+            timestamp()
+          }
+          for(temp_ticker_i in 1:length(temp_tickers)){
+            temp_ticker <- temp_tickers[temp_ticker_i]
+            temp_sma50_df <- data.frame(option_underlying_ticker=temp_ticker,option_quote_date=new_date)
+            temp_aggregate <- sub_aggregate[sub_aggregate$option_underlying_ticker == temp_ticker,]
+            temp_aggregate <- temp_aggregate[,!(colnames(sub_aggregate) %in% c("option_underlying_ticker","option_quote_date"))]
+            if(nrow(temp_aggregate) == 50){
+              temp_sma50_df <- as.data.frame(cbind(temp_sma50_df,t(round(colMeans(temp_aggregate),4))))
+              if(!is.null(SMA50_df)){
+                SMA50_df <- as.data.frame(rbind(SMA50_df,temp_sma50_df))
+              }else{
+                SMA50_df <- as.data.frame(temp_sma50_df)
+              }
+              if(temp_ticker_i %% 1000 == 0){
+                timestamp()
+                print(paste0("SMA50 calculated for ",temp_ticker_i," tickers"))
+              }
+            }else{
+              failed_tickers <- c(failed_tickers,temp_ticker)
+            }
+          }
+        }
+        sub_tickers <- sub_tickers[!(sub_tickers %in% temp_tickers)]
+        print(paste0("SMA50 calculated for ",length(temp_tickers)," tickers"))
+        failed_tickers <- c(sub_tickers,failed_tickers)
+        print(paste0("Insufficient SMA50 data for ",length(failed_tickers)," tickers"))
+      }else{
+        print(paste0("Insufficient EMA50 or SMA50 data for ",length(sub_tickers)," tickers"))
+      }
+      print(paste0("Finished EMA calculations for ",new_date))
+      
+      ##Save data and reset objects while retaining values for continued EMA and SMA calculation
+      if(length(added_dates) %% 100 == 0){
+        if(is.null(last_date)){
+          temp_start_date <- min(added_dates)
+        }else{
+          temp_start_date <- min(added_dates[added_dates > last_date])
+        }
+        temp_end_date <- max(added_dates)
+        temp_base_path <- "E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/"
+        saveRDS(full_aggregate[full_aggregate$option_quote_date >= temp_start_date &
+                                          full_aggregate$option_quote_date <= temp_end_date,],
+                file=paste0(temp_base_path,"full_option_aggregate_",
+                            temp_start_date,"_to_",temp_end_date,".RDS"))
+        saveRDS(SMA5_df[SMA5_df$option_quote_date >= temp_start_date &
+                                          SMA5_df$option_quote_date <= temp_end_date,],
+                file=paste0(temp_base_path,"SMA5_aggregate_",
+                            temp_start_date,"_to_",temp_end_date,".RDS"))
+        saveRDS(SMA10_df[SMA10_df$option_quote_date >= temp_start_date &
+                                          SMA10_df$option_quote_date <= temp_end_date,],
+                file=paste0(temp_base_path,"SMA10_aggregate_",
+                            temp_start_date,"_to_",temp_end_date,".RDS"))
+        saveRDS(SMA20_df[SMA20_df$option_quote_date >= temp_start_date &
+                                          SMA20_df$option_quote_date <= temp_end_date,],
+                file=paste0(temp_base_path,"SMA20_aggregate_",
+                            temp_start_date,"_to_",temp_end_date,".RDS"))
+        saveRDS(SMA50_df[SMA50_df$option_quote_date >= temp_start_date &
+                                          SMA50_df$option_quote_date <= temp_end_date,],
+                file=paste0(temp_base_path,"SMA50_aggregate_",
+                            temp_start_date,"_to_",temp_end_date,".RDS"))
+        saveRDS(EMA5_df[EMA5_df$option_quote_date >= temp_start_date &
+                                          EMA5_df$option_quote_date <= temp_end_date,],
+                file=paste0(temp_base_path,"EMA5_aggregate_",
+                            temp_start_date,"_to_",temp_end_date,".RDS"))
+        saveRDS(EMA10_df[EMA10_df$option_quote_date >= temp_start_date &
+                                          EMA10_df$option_quote_date <= temp_end_date,],
+                file=paste0(temp_base_path,"EMA10_aggregate_",
+                            temp_start_date,"_to_",temp_end_date,".RDS"))
+        saveRDS(EMA20_df[EMA20_df$option_quote_date >= temp_start_date &
+                                          EMA20_df$option_quote_date <= temp_end_date,],
+                file=paste0(temp_base_path,"EMA20_aggregate_",
+                            temp_start_date,"_to_",temp_end_date,".RDS"))
+        saveRDS(EMA50_df[EMA50_df$option_quote_date >= temp_start_date &
+                                          EMA50_df$option_quote_date <= temp_end_date,],
+                file=paste0(temp_base_path,"EMA50_aggregate_",
+                            temp_start_date,"_to_",temp_end_date,".RDS"))
+        dates_to_keep <- added_dates[(length(added_dates)-49):length(added_dates)]
+        new_start_date <- min(dates_to_keep)
+        new_end_date <- max(dates_to_keep)
+        last_date <- new_end_date
+        ##Update objects after save with dates to keep
+        full_aggregate <- full_aggregate[full_aggregate$option_quote_date >= new_start_date &
+                                          full_aggregate$option_quote_date <= new_end_date,]
+        SMA5_df <- SMA5_df[SMA5_df$option_quote_date >= new_start_date &
+                                          SMA5_df$option_quote_date <= new_end_date,]
+        SMA10_df <- SMA10_df[SMA10_df$option_quote_date >= new_start_date &
+                                          SMA10_df$option_quote_date <= new_end_date,]
+        SMA20_df <- SMA20_df[SMA20_df$option_quote_date >= new_start_date &
+                                          SMA20_df$option_quote_date <= new_end_date,]
+        SMA50_df <- SMA50_df[SMA50_df$option_quote_date >= new_start_date &
+                                          SMA50_df$option_quote_date <= new_end_date,]
+        EMA5_df <- EMA5_df[EMA5_df$option_quote_date >= new_start_date &
+                                          EMA5_df$option_quote_date <= new_end_date,]
+        EMA10_df <- EMA10_df[EMA10_df$option_quote_date >= new_start_date &
+                                          EMA10_df$option_quote_date <= new_end_date,]
+        EMA20_df <- EMA20_df[EMA20_df$option_quote_date >= new_start_date &
+                                          EMA20_df$option_quote_date <= new_end_date,]
+        EMA50_df <- EMA50_df[EMA50_df$option_quote_date >= new_start_date &
+                                          EMA50_df$option_quote_date <= new_end_date,]
+      }
     }
   }
+  if(length(added_dates) %% 100 != 0){
+    temp_start_date <- min(added_dates[added_dates > last_date])
+    temp_end_date <- max(added_dates)
+    temp_base_path <- "E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/"
+    saveRDS(full_aggregate[full_aggregate$option_quote_date >= temp_start_date &
+                                      full_aggregate$option_quote_date <= temp_end_date,],
+            file=paste0(temp_base_path,"full_option_aggregate_",
+                        temp_start_date,"_to_",temp_end_date,".RDS"))
+    saveRDS(SMA5_df[SMA5_df$option_quote_date >= temp_start_date &
+                                      SMA5_df$option_quote_date <= temp_end_date,],
+            file=paste0(temp_base_path,"SMA5_aggregate_",
+                        temp_start_date,"_to_",temp_end_date,".RDS"))
+    saveRDS(SMA10_df[SMA10_df$option_quote_date >= temp_start_date &
+                                      SMA10_df$option_quote_date <= temp_end_date,],
+            file=paste0(temp_base_path,"SMA10_aggregate_",
+                        temp_start_date,"_to_",temp_end_date,".RDS"))
+    saveRDS(SMA20_df[SMA20_df$option_quote_date >= temp_start_date &
+                                      SMA20_df$option_quote_date <= temp_end_date,],
+            file=paste0(temp_base_path,"SMA20_aggregate_",
+                        temp_start_date,"_to_",temp_end_date,".RDS"))
+    saveRDS(SMA50_df[SMA50_df$option_quote_date >= temp_start_date &
+                                      SMA50_df$option_quote_date <= temp_end_date,],
+            file=paste0(temp_base_path,"SMA50_aggregate_",
+                        temp_start_date,"_to_",temp_end_date,".RDS"))
+    saveRDS(EMA5_df[EMA5_df$option_quote_date >= temp_start_date &
+                                      EMA5_df$option_quote_date <= temp_end_date,],
+            file=paste0(temp_base_path,"EMA5_aggregate_",
+                        temp_start_date,"_to_",temp_end_date,".RDS"))
+    saveRDS(EMA10_df[EMA10_df$option_quote_date >= temp_start_date &
+                                      EMA10_df$option_quote_date <= temp_end_date,],
+            file=paste0(temp_base_path,"EMA10_aggregate_",
+                        temp_start_date,"_to_",temp_end_date,".RDS"))
+    saveRDS(EMA20_df[EMA20_df$option_quote_date >= temp_start_date &
+                                      EMA20_df$option_quote_date <= temp_end_date,],
+            file=paste0(temp_base_path,"EMA20_aggregate_",
+                        temp_start_date,"_to_",temp_end_date,".RDS"))
+    saveRDS(EMA50_df[EMA50_df$option_quote_date >= temp_start_date &
+                                      EMA50_df$option_quote_date <= temp_end_date,],
+            file=paste0(temp_base_path,"EMA50_aggregate_",
+                        temp_start_date,"_to_",temp_end_date,".RDS"))
+  }
 }
-if(length(added_dates) %% 100 != 0){
-  temp_start_date <- min(added_dates[added_dates > last_date])
-  temp_end_date <- max(added_dates)
-  temp_base_path <- "E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/"
-  saveRDS(full_aggregate[full_aggregate$option_quote_date >= temp_start_date &
-                                    full_aggregate$option_quote_date <= temp_end_date,],
-          file=paste0(temp_base_path,"full_option_aggregate_",
-                      temp_start_date,"_to_",temp_end_date,".RDS"))
-  saveRDS(SMA5_df[SMA5_df$option_quote_date >= temp_start_date &
-                                    SMA5_df$option_quote_date <= temp_end_date,],
-          file=paste0(temp_base_path,"SMA5_aggregate_",
-                      temp_start_date,"_to_",temp_end_date,".RDS"))
-  saveRDS(SMA10_df[SMA10_df$option_quote_date >= temp_start_date &
-                                    SMA10_df$option_quote_date <= temp_end_date,],
-          file=paste0(temp_base_path,"SMA10_aggregate_",
-                      temp_start_date,"_to_",temp_end_date,".RDS"))
-  saveRDS(SMA20_df[SMA20_df$option_quote_date >= temp_start_date &
-                                    SMA20_df$option_quote_date <= temp_end_date,],
-          file=paste0(temp_base_path,"SMA20_aggregate_",
-                      temp_start_date,"_to_",temp_end_date,".RDS"))
-  saveRDS(SMA50_df[SMA50_df$option_quote_date >= temp_start_date &
-                                    SMA50_df$option_quote_date <= temp_end_date,],
-          file=paste0(temp_base_path,"SMA50_aggregate_",
-                      temp_start_date,"_to_",temp_end_date,".RDS"))
-  saveRDS(EMA5_df[EMA5_df$option_quote_date >= temp_start_date &
-                                    EMA5_df$option_quote_date <= temp_end_date,],
-          file=paste0(temp_base_path,"EMA5_aggregate_",
-                      temp_start_date,"_to_",temp_end_date,".RDS"))
-  saveRDS(EMA10_df[EMA10_df$option_quote_date >= temp_start_date &
-                                    EMA10_df$option_quote_date <= temp_end_date,],
-          file=paste0(temp_base_path,"EMA10_aggregate_",
-                      temp_start_date,"_to_",temp_end_date,".RDS"))
-  saveRDS(EMA20_df[EMA20_df$option_quote_date >= temp_start_date &
-                                    EMA20_df$option_quote_date <= temp_end_date,],
-          file=paste0(temp_base_path,"EMA20_aggregate_",
-                      temp_start_date,"_to_",temp_end_date,".RDS"))
-  saveRDS(EMA50_df[EMA50_df$option_quote_date >= temp_start_date &
-                                    EMA50_df$option_quote_date <= temp_end_date,],
-          file=paste0(temp_base_path,"EMA50_aggregate_",
-                      temp_start_date,"_to_",temp_end_date,".RDS"))
-}
-
 
 ###Check for prior SMA if no EMA value is present and calculate new EMA if present
 
@@ -1714,6 +1718,38 @@ change_9d <- merge_aggregate$outcomes_time9_total_change
 write.table(change_9d,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/test_output_change9d_for_NN_20210514_to_20240404.tsv",sep="\t")
 change_10d <- merge_aggregate$outcomes_time10_total_change
 write.table(change_10d,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/test_output_change10d_for_NN_20210514_to_20240404.tsv",sep="\t")
+
+test_group = as.factor(merge_aggregate$outcomes_time10_total_change > 1.09)
+test_output = as.numeric(test_group)-1
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/test_output_new_9up10d_for_NN_20210514_to_20240404.tsv",sep="\t")
+
+test_group = as.factor(merge_aggregate$outcomes_time10_total_change > 1.07)
+test_output = as.numeric(test_group)-1
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/test_output_new_7up10d_for_NN_20210514_to_20240404.tsv",sep="\t")
+
+test_group = as.factor(merge_aggregate$outcomes_time10_total_change > 1.05)
+test_output = as.numeric(test_group)-1
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/test_output_new_5up10d_for_NN_20210514_to_20240404.tsv",sep="\t")
+
+test_group = as.factor(merge_aggregate$outcomes_time10_total_change < 0.95)
+test_output = as.numeric(test_group)-1
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/test_output_new_5down10d_for_NN_20210514_to_20240404.tsv",sep="\t")
+
+test_group = as.factor(merge_aggregate$outcomes_time11_total_change > 1.09)
+test_output = as.numeric(test_group)-1
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/test_output_new_9up11d_for_NN_20210514_to_20240404.tsv",sep="\t")
+
+test_group = as.factor(merge_aggregate$outcomes_time11_total_change > 1.07)
+test_output = as.numeric(test_group)-1
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/test_output_new_7up11d_for_NN_20210514_to_20240404.tsv",sep="\t")
+
+test_group = as.factor(merge_aggregate$outcomes_time11_total_change > 1.05)
+test_output = as.numeric(test_group)-1
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/test_output_new_5up11d_for_NN_20210514_to_20240404.tsv",sep="\t")
+
+test_group = as.factor(merge_aggregate$outcomes_time11_total_change < 0.95)
+test_output = as.numeric(test_group)-1
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/test_output_new_5down11d_for_NN_20210514_to_20240404.tsv",sep="\t")
 
 
 ```
