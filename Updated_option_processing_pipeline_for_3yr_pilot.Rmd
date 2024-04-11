@@ -1063,7 +1063,7 @@ all_splits = NULL
 for(temp_ticker_i in 1:length(SP500_tickers)){
   temp_ticker = SP500_tickers[temp_ticker_i]
   if(!(temp_ticker %in% stocks_to_drop)){
-    splits <- getSplits(temp_ticker,from="2021-05-10",to="2024-04-09")
+    splits <- getSplits(temp_ticker,from="2021-05-10",to="2024-04-10")
     temp_splits = as.data.frame(list(ticker=c(rep(temp_ticker,length(index(splits)))),date=c(index(splits))))
     if(is.null(all_splits)){
       all_splits = temp_splits
@@ -1076,7 +1076,7 @@ for(temp_ticker_i in 1:length(SP500_tickers)){
   }
 }
 
-saveRDS(all_splits,"E:/Market_Data/SP500_splits_20240409.RDS")
+saveRDS(all_splits,"E:/Market_Data/SP500_splits_20240410.RDS")
 
 ```
 
@@ -1789,33 +1789,33 @@ SP500_tickers <- readRDS("E:/Market_Data/SP500_tickers_20240404.RDS")
 SP500_tickers <- unlist(lapply(SP500_tickers,function(x){str_replace_all(x,"[.]","")}))
 
 ###Aggregate together daily, EMA8, and EMA20 data for option aggregates including underlying price
-option_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/full_option_aggregate_2024-01-22_to_2024-04-09.RDS")
+option_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/full_option_aggregate_2024-01-22_to_2024-04-10.RDS")
 option_aggregate <- option_aggregate[option_aggregate$option_underlying_ticker %in% SP500_tickers,]
-option_aggregate <- option_aggregate[option_aggregate$option_quote_date >= "2024-01-22" & option_aggregate$option_quote_date <= "2024-04-09",]
+option_aggregate <- option_aggregate[option_aggregate$option_quote_date >= "2024-01-22" & option_aggregate$option_quote_date <= "2024-04-10",]
 option_aggregate <- option_aggregate[order(option_aggregate$option_underlying_ticker,option_aggregate$option_quote_date),]
 
-EMA5_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/EMA5_aggregate_2024-01-22_to_2024-04-09.RDS")
+EMA5_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/EMA5_aggregate_2024-01-22_to_2024-04-10.RDS")
 EMA5_aggregate <- EMA5_aggregate[EMA5_aggregate$option_underlying_ticker %in% SP500_tickers,]
-EMA5_aggregate <- EMA5_aggregate[EMA5_aggregate$option_quote_date >= "2024-01-22" & EMA5_aggregate$option_quote_date <= "2024-04-09",]
+EMA5_aggregate <- EMA5_aggregate[EMA5_aggregate$option_quote_date >= "2024-01-22" & EMA5_aggregate$option_quote_date <= "2024-04-10",]
 EMA5_aggregate <- EMA5_aggregate[order(EMA5_aggregate$option_underlying_ticker,EMA5_aggregate$option_quote_date),]
 
-EMA10_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/EMA10_aggregate_2024-01-22_to_2024-04-09.RDS")
+EMA10_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/EMA10_aggregate_2024-01-22_to_2024-04-10.RDS")
 EMA10_aggregate <- EMA10_aggregate[EMA10_aggregate$option_underlying_ticker %in% SP500_tickers,]
-EMA10_aggregate <- EMA10_aggregate[EMA10_aggregate$option_quote_date >= "2024-01-22" & EMA10_aggregate$option_quote_date <= "2024-04-09",]
+EMA10_aggregate <- EMA10_aggregate[EMA10_aggregate$option_quote_date >= "2024-01-22" & EMA10_aggregate$option_quote_date <= "2024-04-10",]
 EMA10_aggregate <- EMA10_aggregate[order(EMA10_aggregate$option_underlying_ticker,EMA10_aggregate$option_quote_date),]
 
-EMA20_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/EMA20_aggregate_2024-01-22_to_2024-04-09.RDS")
+EMA20_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/EMA20_aggregate_2024-01-22_to_2024-04-10.RDS")
 EMA20_aggregate <- EMA20_aggregate[EMA20_aggregate$option_underlying_ticker %in% SP500_tickers,]
-EMA20_aggregate <- EMA20_aggregate[EMA20_aggregate$option_quote_date >= "2024-01-22" & EMA20_aggregate$option_quote_date <= "2024-04-09",]
+EMA20_aggregate <- EMA20_aggregate[EMA20_aggregate$option_quote_date >= "2024-01-22" & EMA20_aggregate$option_quote_date <= "2024-04-10",]
 EMA20_aggregate <- EMA20_aggregate[order(EMA20_aggregate$option_underlying_ticker,EMA20_aggregate$option_quote_date),]
 
-EMA50_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/EMA50_aggregate_2024-01-22_to_2024-04-09.RDS")
+EMA50_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/EMA50_aggregate_2024-01-22_to_2024-04-10.RDS")
 EMA50_aggregate <- EMA50_aggregate[EMA50_aggregate$option_underlying_ticker %in% SP500_tickers,]
-EMA50_aggregate <- EMA50_aggregate[EMA50_aggregate$option_quote_date >= "2024-01-22" & EMA50_aggregate$option_quote_date <= "2024-04-09",]
+EMA50_aggregate <- EMA50_aggregate[EMA50_aggregate$option_quote_date >= "2024-01-22" & EMA50_aggregate$option_quote_date <= "2024-04-10",]
 EMA50_aggregate <- EMA50_aggregate[order(EMA50_aggregate$option_underlying_ticker,EMA50_aggregate$option_quote_date),]
 
 ###Remove dates surrounding stock splits
-SP500_splits <- readRDS("E:/Market_Data/SP500_splits_20240409.RDS")
+SP500_splits <- readRDS("E:/Market_Data/SP500_splits_20240410.RDS")
 
 for(temp_split_i in 1:length(SP500_splits)){
   temp_ticker <- SP500_splits$ticker[temp_split_i]
@@ -1930,7 +1930,7 @@ test_input <- cbind(test_input,extra_input)
 filtered_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/merged_aggregate_for_NN_20210514_to_20240404.RDS")
 last_training_date <- max(filtered_aggregate$EOD_option_quote_date)
 test_input <- test_input[merge_aggregate$EOD_option_quote_date > last_training_date,]
-write.table(t(test_input),file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/test_input_for_prediction_with_NN_20240314_to_20240409.tsv",sep="\t")
+write.table(t(test_input),file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/test_input_for_prediction_with_NN_20240314_to_20240410.tsv",sep="\t")
 
 
 ###Create NN test input and output datasets
