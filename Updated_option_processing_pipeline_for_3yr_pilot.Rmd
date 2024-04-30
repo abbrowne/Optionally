@@ -924,51 +924,41 @@ for(temp_date_i in 1:length(all_dates)){
     temp_aggregate <- input_aggregate[input_aggregate$option_quote_date == all_dates[temp_date_i],]
     rownames(temp_aggregate) <- temp_aggregate$option_underlying_ticker
     temp_result = temp_aggregate[,c("option_underlying_ticker","option_quote_date")]
-    for(temp_counter_i in 1:15){
+    for(temp_counter_i in 1:25){
         if((temp_date_i+temp_counter_i) < length(all_dates)){
             comp_aggregate = input_aggregate[input_aggregate$option_quote_date == all_dates[temp_date_i+temp_counter_i],]
             rownames(comp_aggregate) = comp_aggregate$option_underlying_ticker
             temp_result[,paste0("time",temp_counter_i,"_increase2")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"option_underlying_price"] >= 1.02*temp_aggregate$option_underlying_price)
-            temp_result[,paste0("time",temp_counter_i,"_increase025")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"option_underlying_price"] >= 1.025*temp_aggregate$option_underlying_price)
             temp_result[,paste0("time",temp_counter_i,"_increase3")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"option_underlying_price"] >= 1.03*temp_aggregate$option_underlying_price)
-            temp_result[,paste0("time",temp_counter_i,"_increase035")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"option_underlying_price"] >= 1.035*temp_aggregate$option_underlying_price)
             temp_result[,paste0("time",temp_counter_i,"_increase4")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"option_underlying_price"] >= 1.04*temp_aggregate$option_underlying_price)
-            temp_result[,paste0("time",temp_counter_i,"_increase045")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"option_underlying_price"] >= 1.045*temp_aggregate$option_underlying_price)
             temp_result[,paste0("time",temp_counter_i,"_increase5")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"option_underlying_price"] >= 1.05*temp_aggregate$option_underlying_price)
+            temp_result[,paste0("time",temp_counter_i,"_increase6")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"option_underlying_price"] >= 1.06*temp_aggregate$option_underlying_price)
             temp_result[,paste0("time",temp_counter_i,"_increase7")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"option_underlying_price"] >= 1.07*temp_aggregate$option_underlying_price)
-            temp_result[,paste0("time",temp_counter_i,"_increase075")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"option_underlying_price"] >= 1.075*temp_aggregate$option_underlying_price)
             temp_result[,paste0("time",temp_counter_i,"_increase8")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"option_underlying_price"] >= 1.08*temp_aggregate$option_underlying_price)
             temp_result[,paste0("time",temp_counter_i,"_increase9")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"option_underlying_price"] >= 1.09*temp_aggregate$option_underlying_price)
             temp_result[,paste0("time",temp_counter_i,"_increase10")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"option_underlying_price"] >= 1.1*temp_aggregate$option_underlying_price)
             temp_result[,paste0("time",temp_counter_i,"_increase20")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"option_underlying_price"] >= 1.2*temp_aggregate$option_underlying_price)
             temp_result[,paste0("time",temp_counter_i,"_increase50")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"option_underlying_price"] >= 1.5*temp_aggregate$option_underlying_price)
             temp_result[,paste0("time",temp_counter_i,"_decrease2")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"option_underlying_price"] <= 0.98*temp_aggregate$option_underlying_price)
-            temp_result[,paste0("time",temp_counter_i,"_decrease025")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"option_underlying_price"] <= 0.975*temp_aggregate$option_underlying_price)
             temp_result[,paste0("time",temp_counter_i,"_decrease5")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"option_underlying_price"] <= 0.95*temp_aggregate$option_underlying_price)
-            temp_result[,paste0("time",temp_counter_i,"_decrease075")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"option_underlying_price"] <= 0.925*temp_aggregate$option_underlying_price)
             temp_result[,paste0("time",temp_counter_i,"_decrease10")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"option_underlying_price"] <= 0.9*temp_aggregate$option_underlying_price)
             temp_result[,paste0("time",temp_counter_i,"_decrease20")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"option_underlying_price"] <= 0.8*temp_aggregate$option_underlying_price)
             temp_result[,paste0("time",temp_counter_i,"_decrease50")] = as.numeric(comp_aggregate[rownames(temp_aggregate),"option_underlying_price"] <= 0.5*temp_aggregate$option_underlying_price)
             temp_result[,paste0("time",temp_counter_i,"_total_change")] = round(as.numeric(comp_aggregate[rownames(temp_aggregate),"option_underlying_price"] / temp_aggregate$option_underlying_price),5)
         }else{
             temp_result[,paste0("time",temp_counter_i,"_increase2")] = NA
-            temp_result[,paste0("time",temp_counter_i,"_increase025")] = NA
             temp_result[,paste0("time",temp_counter_i,"_increase3")] = NA
-            temp_result[,paste0("time",temp_counter_i,"_increase035")] = NA
             temp_result[,paste0("time",temp_counter_i,"_increase4")] = NA
-            temp_result[,paste0("time",temp_counter_i,"_increase045")] = NA
             temp_result[,paste0("time",temp_counter_i,"_increase5")] = NA
+            temp_result[,paste0("time",temp_counter_i,"_increase6")] = NA
             temp_result[,paste0("time",temp_counter_i,"_increase7")] = NA
-            temp_result[,paste0("time",temp_counter_i,"_increase075")] = NA
             temp_result[,paste0("time",temp_counter_i,"_increase8")] = NA
             temp_result[,paste0("time",temp_counter_i,"_increase9")] = NA
             temp_result[,paste0("time",temp_counter_i,"_increase10")] = NA
             temp_result[,paste0("time",temp_counter_i,"_increase20")] = NA
             temp_result[,paste0("time",temp_counter_i,"_increase50")] = NA
             temp_result[,paste0("time",temp_counter_i,"_decrease2")] = NA
-            temp_result[,paste0("time",temp_counter_i,"_decrease025")] = NA
             temp_result[,paste0("time",temp_counter_i,"_decrease5")] = NA
-            temp_result[,paste0("time",temp_counter_i,"_decrease075")] = NA
             temp_result[,paste0("time",temp_counter_i,"_decrease10")] = NA
             temp_result[,paste0("time",temp_counter_i,"_decrease20")] = NA
             temp_result[,paste0("time",temp_counter_i,"_decrease50")] = NA
@@ -986,18 +976,18 @@ for(temp_date_i in 1:length(all_dates)){
     }
     print(paste0("Finished with day ",temp_date_i))
     if(temp_date_i %% 100 == 0){
-      saveRDS(full_outcomes,file=paste0("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/full_outcomes_20210514_to_20240404_part",file_counter_i,".RDS"))
+      saveRDS(full_outcomes,file=paste0("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/full_outcomes_20210514_to_20240404_V3_part",file_counter_i,".RDS"))
       full_outcomes <- NULL
       file_counter_i <- file_counter_i + 1
     }
 }
 if(temp_date_i %% 100 != 0){
-  saveRDS(full_outcomes,file=paste0("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/full_outcomes_20210514_to_20240404_part",file_counter_i,".RDS"))
+  saveRDS(full_outcomes,file=paste0("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/full_outcomes_20210514_to_20240404_V3_part",file_counter_i,".RDS"))
 }
 
 base_dir <- "E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/"
 all_files <- list.files(base_dir)
-all_files <- all_files[grepl("full_outcomes_20210514_to_20240404_part",all_files)]
+all_files <- all_files[grepl("full_outcomes_20210514_to_20240404_V3_part",all_files)]
 full_outcomes <- NULL
 for(temp_file_i in 1:length(all_files)){
   if(is.null(full_outcomes)){
@@ -1008,7 +998,7 @@ for(temp_file_i in 1:length(all_files)){
   }
 }
 
-saveRDS(full_outcomes,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/full_outcomesV2_20210514_to_20240404.RDS")
+saveRDS(full_outcomes,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/full_outcomesV3_20210514_to_20240404.RDS")
 
 ####
 
@@ -1063,7 +1053,7 @@ all_splits = NULL
 for(temp_ticker_i in 1:length(SP500_tickers)){
   temp_ticker = SP500_tickers[temp_ticker_i]
   if(!(temp_ticker %in% stocks_to_drop)){
-    splits <- getSplits(temp_ticker,from="2021-05-10",to="2024-04-10")
+    splits <- getSplits(temp_ticker,from="2021-05-10",to="2024-04-11")
     temp_splits = as.data.frame(list(ticker=c(rep(temp_ticker,length(index(splits)))),date=c(index(splits))))
     if(is.null(all_splits)){
       all_splits = temp_splits
@@ -1076,7 +1066,7 @@ for(temp_ticker_i in 1:length(SP500_tickers)){
   }
 }
 
-saveRDS(all_splits,"E:/Market_Data/SP500_splits_20240410.RDS")
+saveRDS(all_splits,"E:/Market_Data/SP500_splits_20240411.RDS")
 
 ```
 
@@ -1792,26 +1782,166 @@ SP500_tickers <- unlist(lapply(SP500_tickers,function(x){str_replace_all(x,"[.]"
 option_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/full_option_aggregate_2024-01-22_to_2024-04-10.RDS")
 option_aggregate <- option_aggregate[option_aggregate$option_underlying_ticker %in% SP500_tickers,]
 option_aggregate <- option_aggregate[option_aggregate$option_quote_date >= "2024-01-22" & option_aggregate$option_quote_date <= "2024-04-10",]
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/full_option_aggregate_2023-09-04_to_2024-01-19.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2023-09-04" & temp_aggregate$option_quote_date <= "2024-01-19",]
+option_aggregate <- as.data.frame(rbind(temp_aggregate,option_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/full_option_aggregate_2023-04-17_to_2023-09-01.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2023-04-17" & temp_aggregate$option_quote_date <= "2023-09-01",]
+option_aggregate <- as.data.frame(rbind(temp_aggregate,option_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/full_option_aggregate_2022-11-28_to_2023-04-14.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2022-11-28" & temp_aggregate$option_quote_date <= "2023-04-14",]
+option_aggregate <- as.data.frame(rbind(temp_aggregate,option_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/full_option_aggregate_2022-07-11_to_2022-11-25.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2022-07-11" & temp_aggregate$option_quote_date <= "2022-11-25",]
+option_aggregate <- as.data.frame(rbind(temp_aggregate,option_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/full_option_aggregate_2022-02-21_to_2022-07-08.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2022-02-21" & temp_aggregate$option_quote_date <= "2022-07-08",]
+option_aggregate <- as.data.frame(rbind(temp_aggregate,option_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/full_option_aggregate_2021-10-01_to_2022-02-18.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2021-10-01" & temp_aggregate$option_quote_date <= "2022-02-18",]
+option_aggregate <- as.data.frame(rbind(temp_aggregate,option_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/full_option_aggregate_2021-05-14_to_2021-09-30.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2021-05-14" & temp_aggregate$option_quote_date <= "2021-09-30",]
+option_aggregate <- as.data.frame(rbind(temp_aggregate,option_aggregate))
 option_aggregate <- option_aggregate[order(option_aggregate$option_underlying_ticker,option_aggregate$option_quote_date),]
 
 EMA5_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/EMA5_aggregate_2024-01-22_to_2024-04-10.RDS")
 EMA5_aggregate <- EMA5_aggregate[EMA5_aggregate$option_underlying_ticker %in% SP500_tickers,]
 EMA5_aggregate <- EMA5_aggregate[EMA5_aggregate$option_quote_date >= "2024-01-22" & EMA5_aggregate$option_quote_date <= "2024-04-10",]
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA5_aggregate_2023-09-04_to_2024-01-19.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2023-09-04" & temp_aggregate$option_quote_date <= "2024-01-19",]
+EMA5_aggregate <- as.data.frame(rbind(temp_aggregate,EMA5_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA5_aggregate_2023-04-17_to_2023-09-01.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2023-04-17" & temp_aggregate$option_quote_date <= "2023-09-01",]
+EMA5_aggregate <- as.data.frame(rbind(temp_aggregate,EMA5_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA5_aggregate_2022-11-28_to_2023-04-14.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2022-11-28" & temp_aggregate$option_quote_date <= "2023-04-14",]
+EMA5_aggregate <- as.data.frame(rbind(temp_aggregate,EMA5_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA5_aggregate_2022-07-11_to_2022-11-25.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2022-07-11" & temp_aggregate$option_quote_date <= "2022-11-25",]
+EMA5_aggregate <- as.data.frame(rbind(temp_aggregate,EMA5_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA5_aggregate_2022-02-21_to_2022-07-08.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2022-02-21" & temp_aggregate$option_quote_date <= "2022-07-08",]
+EMA5_aggregate <- as.data.frame(rbind(temp_aggregate,EMA5_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA5_aggregate_2021-10-01_to_2022-02-18.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2021-10-01" & temp_aggregate$option_quote_date <= "2022-02-18",]
+EMA5_aggregate <- as.data.frame(rbind(temp_aggregate,EMA5_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA5_aggregate_2021-05-14_to_2021-09-30.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2021-05-14" & temp_aggregate$option_quote_date <= "2021-09-30",]
+EMA5_aggregate <- as.data.frame(rbind(temp_aggregate,EMA5_aggregate))
 EMA5_aggregate <- EMA5_aggregate[order(EMA5_aggregate$option_underlying_ticker,EMA5_aggregate$option_quote_date),]
 
 EMA10_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/EMA10_aggregate_2024-01-22_to_2024-04-10.RDS")
 EMA10_aggregate <- EMA10_aggregate[EMA10_aggregate$option_underlying_ticker %in% SP500_tickers,]
 EMA10_aggregate <- EMA10_aggregate[EMA10_aggregate$option_quote_date >= "2024-01-22" & EMA10_aggregate$option_quote_date <= "2024-04-10",]
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA10_aggregate_2023-09-04_to_2024-01-19.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2023-09-04" & temp_aggregate$option_quote_date <= "2024-01-19",]
+EMA10_aggregate <- as.data.frame(rbind(temp_aggregate,EMA10_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA10_aggregate_2023-04-17_to_2023-09-01.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2023-04-17" & temp_aggregate$option_quote_date <= "2023-09-01",]
+EMA10_aggregate <- as.data.frame(rbind(temp_aggregate,EMA10_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA10_aggregate_2022-11-28_to_2023-04-14.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2022-11-28" & temp_aggregate$option_quote_date <= "2023-04-14",]
+EMA10_aggregate <- as.data.frame(rbind(temp_aggregate,EMA10_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA10_aggregate_2022-07-11_to_2022-11-25.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2022-07-11" & temp_aggregate$option_quote_date <= "2022-11-25",]
+EMA10_aggregate <- as.data.frame(rbind(temp_aggregate,EMA10_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA10_aggregate_2022-02-21_to_2022-07-08.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2022-02-21" & temp_aggregate$option_quote_date <= "2022-07-08",]
+EMA10_aggregate <- as.data.frame(rbind(temp_aggregate,EMA10_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA10_aggregate_2021-10-01_to_2022-02-18.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2021-10-01" & temp_aggregate$option_quote_date <= "2022-02-18",]
+EMA10_aggregate <- as.data.frame(rbind(temp_aggregate,EMA10_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA10_aggregate_2021-05-14_to_2021-09-30.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2021-05-14" & temp_aggregate$option_quote_date <= "2021-09-30",]
+EMA10_aggregate <- as.data.frame(rbind(temp_aggregate,EMA10_aggregate))
 EMA10_aggregate <- EMA10_aggregate[order(EMA10_aggregate$option_underlying_ticker,EMA10_aggregate$option_quote_date),]
 
 EMA20_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/EMA20_aggregate_2024-01-22_to_2024-04-10.RDS")
 EMA20_aggregate <- EMA20_aggregate[EMA20_aggregate$option_underlying_ticker %in% SP500_tickers,]
 EMA20_aggregate <- EMA20_aggregate[EMA20_aggregate$option_quote_date >= "2024-01-22" & EMA20_aggregate$option_quote_date <= "2024-04-10",]
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA20_aggregate_2023-09-04_to_2024-01-19.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2023-09-04" & temp_aggregate$option_quote_date <= "2024-01-19",]
+EMA20_aggregate <- as.data.frame(rbind(temp_aggregate,EMA20_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA20_aggregate_2023-04-17_to_2023-09-01.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2023-04-17" & temp_aggregate$option_quote_date <= "2023-09-01",]
+EMA20_aggregate <- as.data.frame(rbind(temp_aggregate,EMA20_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA20_aggregate_2022-11-28_to_2023-04-14.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2022-11-28" & temp_aggregate$option_quote_date <= "2023-04-14",]
+EMA20_aggregate <- as.data.frame(rbind(temp_aggregate,EMA20_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA20_aggregate_2022-07-11_to_2022-11-25.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2022-07-11" & temp_aggregate$option_quote_date <= "2022-11-25",]
+EMA20_aggregate <- as.data.frame(rbind(temp_aggregate,EMA20_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA20_aggregate_2022-02-21_to_2022-07-08.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2022-02-21" & temp_aggregate$option_quote_date <= "2022-07-08",]
+EMA20_aggregate <- as.data.frame(rbind(temp_aggregate,EMA20_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA20_aggregate_2021-10-01_to_2022-02-18.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2021-10-01" & temp_aggregate$option_quote_date <= "2022-02-18",]
+EMA20_aggregate <- as.data.frame(rbind(temp_aggregate,EMA20_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA20_aggregate_2021-05-14_to_2021-09-30.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2021-05-14" & temp_aggregate$option_quote_date <= "2021-09-30",]
+EMA20_aggregate <- as.data.frame(rbind(temp_aggregate,EMA20_aggregate))
 EMA20_aggregate <- EMA20_aggregate[order(EMA20_aggregate$option_underlying_ticker,EMA20_aggregate$option_quote_date),]
 
 EMA50_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/EMA50_aggregate_2024-01-22_to_2024-04-10.RDS")
 EMA50_aggregate <- EMA50_aggregate[EMA50_aggregate$option_underlying_ticker %in% SP500_tickers,]
 EMA50_aggregate <- EMA50_aggregate[EMA50_aggregate$option_quote_date >= "2024-01-22" & EMA50_aggregate$option_quote_date <= "2024-04-10",]
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA50_aggregate_2023-09-04_to_2024-01-19.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2023-09-04" & temp_aggregate$option_quote_date <= "2024-01-19",]
+EMA50_aggregate <- as.data.frame(rbind(temp_aggregate,EMA50_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA50_aggregate_2023-04-17_to_2023-09-01.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2023-04-17" & temp_aggregate$option_quote_date <= "2023-09-01",]
+EMA50_aggregate <- as.data.frame(rbind(temp_aggregate,EMA50_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA50_aggregate_2022-11-28_to_2023-04-14.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2022-11-28" & temp_aggregate$option_quote_date <= "2023-04-14",]
+EMA50_aggregate <- as.data.frame(rbind(temp_aggregate,EMA50_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA50_aggregate_2022-07-11_to_2022-11-25.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2022-07-11" & temp_aggregate$option_quote_date <= "2022-11-25",]
+EMA50_aggregate <- as.data.frame(rbind(temp_aggregate,EMA50_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA50_aggregate_2022-02-21_to_2022-07-08.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2022-02-21" & temp_aggregate$option_quote_date <= "2022-07-08",]
+EMA50_aggregate <- as.data.frame(rbind(temp_aggregate,EMA50_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA50_aggregate_2021-10-01_to_2022-02-18.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2021-10-01" & temp_aggregate$option_quote_date <= "2022-02-18",]
+EMA50_aggregate <- as.data.frame(rbind(temp_aggregate,EMA50_aggregate))
+temp_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/EMA50_aggregate_2021-05-14_to_2021-09-30.RDS")
+temp_aggregate <- temp_aggregate[temp_aggregate$option_underlying_ticker %in% SP500_tickers,]
+temp_aggregate <- temp_aggregate[temp_aggregate$option_quote_date >= "2021-05-14" & temp_aggregate$option_quote_date <= "2021-09-30",]
+EMA50_aggregate <- as.data.frame(rbind(temp_aggregate,EMA50_aggregate))
 EMA50_aggregate <- EMA50_aggregate[order(EMA50_aggregate$option_underlying_ticker,EMA50_aggregate$option_quote_date),]
 
 ###Remove dates surrounding stock splits
@@ -1930,8 +2060,10 @@ test_input <- cbind(test_input,extra_input)
 filtered_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/merged_aggregate_for_NN_20210514_to_20240404.RDS")
 last_training_date <- max(filtered_aggregate$EOD_option_quote_date)
 test_input <- test_input[merge_aggregate$EOD_option_quote_date > last_training_date,]
-write.table(t(test_input),file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/test_input_for_prediction_with_NN_20240314_to_20240410.tsv",sep="\t")
+merge_aggregate <- merge_aggregate[merge_aggregate$EOD_option_quote_date > last_training_date,]
 
+write.table(t(test_input),file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/test_input_for_prediction_with_NN_20240314_to_20240410.tsv",sep="\t")
+saveRDS(merge_aggregate,"E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/full_aggregate_for_prediction_with_NN_20240314_to_20240410.RDS")
 
 ###Create NN test input and output datasets
 #test_input = as.matrix(merge_aggregate[,!(colnames(merge_aggregate) %in% 
@@ -1948,6 +2080,602 @@ write.table(t(test_input),file="E:/Market_Data/DiscountOptionData/DTNSubscriptio
 ###For each day
 ###1. Retrieve followup stock data for predicted tickers and add to prediction df
 ###2. Plot ticker data across 10+ day timecourse
+
+###Load predictions and input data
+#input_dataset <- read.table("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/test_input_for_prediction_with_NN_20240314_to_20240410.tsv",sep="\t")
+merge_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/full_aggregate_for_prediction_with_NN_20240314_to_20240411.RDS")
+
+temp_predictions <- read.table("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/realtime_testing_predictions_merged9up10d_output.tsv",sep="\t",header=TRUE)
+
+rownames(temp_predictions) <- rownames(merge_aggregate)
+temp_predictions$Ticker <- merge_aggregate$EOD_option_underlying_ticker
+temp_predictions$Date <- merge_aggregate$EOD_option_quote_date
+temp_predictions$starting_price <- merge_aggregate$EOD_option_underlying_price
+
+positive_predictions <- temp_predictions[temp_predictions$Predicted == "True",]
+pricing_results <- NULL
+for(temp_row_i in 1:nrow(positive_predictions)){
+  temp_ticker <- positive_predictions$Ticker[temp_row_i]
+  start_date <- positive_predictions$Date[temp_row_i]+1
+  end_date <- start_date + 20
+  temp_results <- getSymbols(temp_ticker, src = "yahoo", from = start_date, to = end_date, auto.assign = FALSE)
+  colnames(temp_results) <- c("Open","High","Low","Close","Volume","Adjusted")
+  temp_open <- as.vector(temp_results$Open)
+  if(length(temp_open) < 11){
+    temp_open <- c(temp_open,rep(NA,11-length(temp_open)))
+  }else{
+    temp_open <- temp_open[1:11]
+  }
+  temp_close <- as.vector(temp_results$Close)
+  if(length(temp_close) < 11){
+    temp_close <- c(temp_close,rep(NA,11-length(temp_close)))
+  }else{
+    temp_close <- temp_close[1:11]
+  }
+  temp_high <- as.vector(temp_results$High)
+  if(length(temp_high) < 11){
+    temp_high <- c(temp_high,rep(NA,11-length(temp_high)))
+  }else{
+    temp_high <- temp_high[1:11]
+  }
+  temp_low <- as.vector(temp_results$Low)
+  if(length(temp_low) < 11){
+    temp_low <- c(temp_low,rep(NA,11-length(temp_low)))
+  }else{
+    temp_low <- temp_low[1:11]
+  }
+  temp_prices <- c(temp_open,temp_close,temp_high,temp_low)
+  temp_max <- max(temp_prices[c(10,21,32,43)],na.rm = TRUE)
+  temp_prices <- as.data.frame(t(c(temp_max,temp_prices)))
+  colnames(temp_prices) <- c("Max_price",paste0(rep("Day",44),rep(seq(1:11),4),c(rep("_Open",11),rep("_Close",11),rep("_High",11),rep("_Low",11))))
+  if(is.null(pricing_results)){
+    pricing_results <- temp_prices
+  }else{
+    pricing_results <- rbind(pricing_results,temp_prices)
+  }
+}
+rownames(pricing_results) <- rownames(positive_predictions)
+positive_predictions <- cbind(positive_predictions, pricing_results)
+
+target_return <- 1.02
+positive_predictions$target_price <- positive_predictions$starting_price * target_return
+
+positive_predictions <- positive_predictions[rowSums(is.na(positive_predictions)) == 0,]
+
+test_dates <- unique(positive_predictions$Date)
+test_dates <- test_dates[order(test_dates)]
+for(temp_i in 1:length(test_dates)){
+    test <- positive_predictions[positive_predictions$Date == test_dates[temp_i],]
+    print(test_dates[temp_i])
+    print(paste0("Total tickers: ",sum(positive_predictions$Date == test_dates[temp_i])))
+    print(paste0("Accuracy: ",100*round((sum(test$Max_price > test$target_price) / nrow(test)),2),"%"))
+    print(paste0("Mean return: ",100*round(mean(test$Max_price / test$starting_price)-1,2),"%"))
+}
+
+#####
+temp_predictions <- read.table("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/realtime_testing_predictions_merged5up10d_output.tsv",sep="\t",header=TRUE)
+merge_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/full_aggregate_for_prediction_with_NN_20240314_to_20240410.RDS")
+
+rownames(temp_predictions) <- rownames(merge_aggregate)
+temp_predictions$Ticker <- merge_aggregate$EOD_option_underlying_ticker
+temp_predictions$Date <- merge_aggregate$EOD_option_quote_date
+temp_predictions$starting_price <- merge_aggregate$EOD_option_underlying_price
+
+positive_predictions <- temp_predictions[temp_predictions$Predicted == "True",]
+
+yesterday_date <- Sys.Date() - 1
+yesterday_date <- format(yesterday_date, "%Y-%m-%d")
+
+daily_predictions <- positive_predictions[positive_predictions$Date ==  yesterday_date,]
+tickers_to_check <- daily_predictions$Ticker
+
+###Get sentiment data for positive predictions
+library(rvest)
+
+getMBSentiment <- function(input_ticker){
+  # Set the URL for the AAPL stock page on MarketBeat
+  url <- paste0("https://www.marketbeat.com/stocks/NASDAQ/",input_ticker,"/")
+  
+  # Read the HTML content of the page
+  page <- read_html(url)
+  
+  value <- page %>%
+      html_nodes('div[data-slide-to="4"] .key-stat') %>%
+      html_text()
+  
+  return(value)
+}
+
+sentiment_list <- NULL
+for(temp_i in 1:length(tickers_to_check)){
+  temp_sentiment <- getMBSentiment(tickers_to_check[temp_i])
+  if(is.null(sentiment_list)){
+    sentiment_list <- temp_sentiment
+  }else{
+    sentiment_list <- c(sentiment_list,temp_sentiment)
+  }
+}
+
+daily_predictions$Day1_sentiment <- sentiment_list
+
+saveRDS(daily_predictions,paste0("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions_for_5up10d_with_sentiment_for_",yesterday_date,".RDS"))
+
+
+###Check day of week accuracy on test data!!!
+temp_predictions <- read.table("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/testing_predictions_merged9up10d_output.tsv",sep="\t",header=TRUE)
+merge_aggregate <- read.table("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/primary_testing_input.tsv",sep="\t",header=TRUE)
+temp_dates <- lapply(colnames(merge_aggregate), function(x) { as.Date(str_split(x, "_")[[1]][2], format = "%Y%m%d") })
+temp_predictions$Date <- as.Date(unlist(temp_dates))
+temp_predictions$Weekday <- weekdays(temp_predictions$Date)
+temp_predictions$TP <- (temp_predictions$Actual == 1 & temp_predictions$Predicted == "True")
+temp_predictions$FP <- (temp_predictions$Actual == 0 & temp_predictions$Predicted == "True")
+
+###From quick check on testing dataset, Monday is the worst day to run predictions
+
+###Redo modeling with outcome measuring difference at 10th day
+
+```
+
+```{r get all pricing data for SP500 stocks for model date range}
+
+SP500_tickers <- readRDS("E:/Market_Data/SP500_tickers_20240404.RDS")
+SP500_tickers <- unlist(lapply(SP500_tickers,function(x){str_replace_all(x,"[.]","-")}))
+
+full_results <- NULL
+for(temp_ticker_i in 1:length(SP500_tickers)){
+  temp_ticker <- SP500_tickers[temp_ticker_i]
+  start_date <- as.Date("2021-01-01")
+  end_date <- as.Date("2024-04-23")
+  temp_results <- as.data.frame(getSymbols(temp_ticker, src = "yahoo", from = start_date, to = end_date, auto.assign = FALSE))
+  colnames(temp_results) <- c("Open","High","Low","Close","Volume","Adjusted")
+  temp_results$Date <- as.Date(rownames(temp_results), format = "%Y-%m-%d")
+  temp_results$Ticker <- temp_ticker
+  rownames(temp_results) <- paste0(temp_ticker,"_",rownames(temp_results))
+  if(is.null(full_results)){
+    full_results <- temp_results
+  }else{
+    full_results <- rbind(full_results,temp_results)
+  }
+  print(paste0("Finished with ",temp_ticker))
+}
+saveRDS(full_results,file="E:/Market_Data/SP500_3yr_price_history.RDS")
+
+
+```
+
+```{r recalculate outcomes with EMAs from more complete pricing data from yahoo}
+
+full_results <- readRDS("E:/Market_Data/SP500_3yr_price_history.RDS")
+
+##Calculate average open+close for each day
+full_results$avgOpenClose <- round(rowMeans(full_results[,c("Open","Close")]),2)
+full_results <- full_results[order(full_results$Ticker,full_results$Date),]
+all_tickers <- unique(full_results$Ticker)
+
+timestamp()
+##Calculate EMA5, 10, 15, 20, 25, and 50 for each day
+updated_results <- list()
+for(temp_ticker_i in 1:length(all_tickers)){
+  temp_ticker <- all_tickers[temp_ticker_i]
+  sub_results <- full_results[full_results$Ticker == temp_ticker,]
+  sub_dates <- sub_results$Date
+  sub_output <- NULL
+  for(temp_date_i in 1:length(sub_dates)){
+    temp_date <- as.character(sub_dates[temp_date_i])
+    new_results <- c(temp_ticker,temp_date)
+    if(temp_date_i > 4){
+      temp_EMA <- round(mean(sub_results$avgOpenClose[(temp_date_i-4):temp_date_i]),2)
+      new_results <- c(new_results,temp_EMA)
+    }else{
+      new_results <- c(new_results,NA)
+    }
+    if(temp_date_i > 9){
+      temp_EMA <- round(mean(sub_results$avgOpenClose[(temp_date_i-9):temp_date_i]),2)
+      new_results <- c(new_results,temp_EMA)
+    }else{
+      new_results <- c(new_results,NA)
+    }
+    if(temp_date_i > 14){
+      temp_EMA <- round(mean(sub_results$avgOpenClose[(temp_date_i-14):temp_date_i]),2)
+      new_results <- c(new_results,temp_EMA)
+    }else{
+      new_results <- c(new_results,NA)
+    }
+    if(temp_date_i > 19){
+      temp_EMA <- round(mean(sub_results$avgOpenClose[(temp_date_i-19):temp_date_i]),2)
+      new_results <- c(new_results,temp_EMA)
+    }else{
+      new_results <- c(new_results,NA)
+    }
+    if(temp_date_i > 24){
+      temp_EMA <- round(mean(sub_results$avgOpenClose[(temp_date_i-24):temp_date_i]),2)
+      new_results <- c(new_results,temp_EMA)
+    }else{
+      new_results <- c(new_results,NA)
+    }
+    if(temp_date_i > 49){
+      temp_EMA <- round(mean(sub_results$avgOpenClose[(temp_date_i-49):temp_date_i]),2)
+      new_results <- c(new_results,temp_EMA)
+    }else{
+      new_results <- c(new_results,NA)
+    }
+    new_results <- t(as.data.frame(new_results))
+    colnames(new_results) <- c("Ticker","Date","EMA5","EMA10","EMA15","EMA20","EMA25","EMA50")
+    rownames(new_results) <- paste0(temp_ticker,"_",temp_date)
+    if(is.null(sub_output)){
+      sub_output <- as.data.frame(new_results)
+    }else{
+      sub_output <- rbind(sub_output,as.data.frame(new_results))
+    }
+  }
+  updated_results[[temp_ticker]] <- sub_output
+  print(paste0("Finished with ",temp_ticker))
+  if(temp_ticker_i %% 10 == 0){
+    timestamp()
+  }
+}
+
+merged_results <- NULL
+for(temp_i in 1:length(updated_results)){
+  if(is.null(merged_results)){
+    merged_results <- updated_results[[temp_i]]
+  }else{
+    merged_results <- rbind(merged_results,updated_results[[temp_i]])
+  } 
+}
+
+
+
+merged_results$Date <- as.Date(merged_results$Date, format = "%Y-%m-%d")
+merged_results$EMA5 <- as.numeric(merged_results$EMA5)
+merged_results$EMA10 <- as.numeric(merged_results$EMA10)
+merged_results$EMA15 <- as.numeric(merged_results$EMA15)
+merged_results$EMA20 <- as.numeric(merged_results$EMA20)
+merged_results$EMA25 <- as.numeric(merged_results$EMA25)
+merged_results$EMA50 <- as.numeric(merged_results$EMA50)
+
+merged_results <- merged_results[order(merged_results$Ticker,merged_results$Date),]
+
+full_results <- cbind(full_results,merged_results[rownames(full_results),c("EMA5","EMA10","EMA15","EMA20","EMA25","EMA50")])
+saveRDS(full_results,file="E:/Market_Data/SP500_3yr_price_history_with_EMAs.RDS")
+
+full_results <- readRDS("E:/Market_Data/SP500_3yr_price_history_with_EMAs.RDS")
+
+##Derive outcomes by checking if EMAX is greater than threshold for price X days prior
+all_tickers <- unique(full_results$Ticker)
+new_columns <- NULL
+for(temp_ticker_i in 1:length(all_tickers)){
+  temp_ticker <- all_tickers[temp_ticker_i]
+  sub_results <- full_results[full_results$Ticker == temp_ticker,]
+  temp_rownames=c()
+  temp_avgOpenClose_ahead5=c()
+  temp_avgOpenClose_ahead10=c()
+  temp_avgOpenClose_ahead15=c()
+  temp_avgOpenClose_ahead20=c()
+  temp_avgOpenClose_ahead25=c()
+  temp_avgOpenClose_ahead50=c()
+  temp_EMA5ahead5=c()
+  temp_EMA5ahead10=c()
+  temp_EMA5ahead15=c()
+  temp_EMA5ahead20=c()
+  temp_EMA5ahead25=c()
+  temp_EMA5ahead50=c()
+  temp_EMA10ahead10=c()
+  temp_EMA10ahead15=c()
+  temp_EMA10ahead20=c()
+  temp_EMA10ahead25=c()
+  temp_EMA10ahead50=c()
+  for(temp_date_i in 1:nrow(sub_results)){
+    temp_rownames <- c(temp_rownames,rownames(sub_results)[temp_date_i])
+    if(nrow(sub_results) >= (temp_date_i + 5)){
+      temp_EMA5ahead5 <- c(temp_EMA5ahead5,sub_results$EMA5[(temp_date_i + 5)])
+      temp_avgOpenClose_ahead5 <- c(temp_avgOpenClose_ahead5,sub_results$avgOpenClose[(temp_date_i + 5)])
+    }else{
+      temp_EMA5ahead5 <- c(temp_EMA5ahead5, NA)
+      temp_avgOpenClose_ahead5 <- c(temp_avgOpenClose_ahead5, NA)
+    }
+    if(nrow(sub_results) >= (temp_date_i + 10)){
+      temp_EMA5ahead10 <- c(temp_EMA5ahead10,sub_results$EMA5[(temp_date_i + 10)])
+      temp_EMA10ahead10 <- c(temp_EMA10ahead10,sub_results$EMA10[(temp_date_i + 10)])
+      temp_avgOpenClose_ahead10 <- c(temp_avgOpenClose_ahead10,sub_results$avgOpenClose[(temp_date_i + 10)])
+    }else{
+      temp_EMA5ahead10 <- c(temp_EMA5ahead10, NA)
+      temp_EMA10ahead10 <- c(temp_EMA10ahead10, NA)
+      temp_avgOpenClose_ahead10 <- c(temp_avgOpenClose_ahead10, NA)
+    }
+    
+    if(nrow(sub_results) >= (temp_date_i + 15)){
+      temp_EMA5ahead15 <- c(temp_EMA5ahead15,sub_results$EMA5[(temp_date_i + 15)])
+      temp_EMA10ahead15 <- c(temp_EMA10ahead15,sub_results$EMA10[(temp_date_i + 15)])
+      temp_avgOpenClose_ahead15 <- c(temp_avgOpenClose_ahead15,sub_results$avgOpenClose[(temp_date_i + 15)])
+    }else{
+      temp_EMA5ahead15 <- c(temp_EMA5ahead15, NA)
+      temp_EMA10ahead15 <- c(temp_EMA10ahead15, NA)
+      temp_avgOpenClose_ahead15 <- c(temp_avgOpenClose_ahead15, NA)
+    }
+    
+    if(nrow(sub_results) >= (temp_date_i + 20)){
+      temp_EMA5ahead20 <- c(temp_EMA5ahead20,sub_results$EMA5[(temp_date_i + 20)])
+      temp_EMA10ahead20 <- c(temp_EMA10ahead20,sub_results$EMA10[(temp_date_i + 20)])
+      temp_avgOpenClose_ahead20 <- c(temp_avgOpenClose_ahead20,sub_results$avgOpenClose[(temp_date_i + 20)])
+    }else{
+      temp_EMA5ahead20 <- c(temp_EMA5ahead20, NA)
+      temp_EMA10ahead20 <- c(temp_EMA10ahead20, NA)
+      temp_avgOpenClose_ahead20 <- c(temp_avgOpenClose_ahead20, NA)
+    }
+    
+    if(nrow(sub_results) >= (temp_date_i + 25)){
+      temp_EMA5ahead25 <- c(temp_EMA5ahead25,sub_results$EMA5[(temp_date_i + 25)])
+      temp_EMA10ahead25 <- c(temp_EMA10ahead25,sub_results$EMA10[(temp_date_i + 25)])
+      temp_avgOpenClose_ahead25 <- c(temp_avgOpenClose_ahead25,sub_results$avgOpenClose[(temp_date_i + 25)])
+    }else{
+      temp_EMA5ahead25 <- c(temp_EMA5ahead25, NA)
+      temp_EMA10ahead25 <- c(temp_EMA10ahead25, NA)
+      temp_avgOpenClose_ahead25 <- c(temp_avgOpenClose_ahead25, NA)
+    }
+    
+    if(nrow(sub_results) >= (temp_date_i + 50)){
+      temp_EMA5ahead50 <- c(temp_EMA5ahead50,sub_results$EMA5[(temp_date_i + 50)])
+      temp_EMA10ahead50 <- c(temp_EMA10ahead50,sub_results$EMA10[(temp_date_i + 50)])
+      temp_avgOpenClose_ahead50 <- c(temp_avgOpenClose_ahead50,sub_results$avgOpenClose[(temp_date_i + 50)])
+    }else{
+      temp_EMA5ahead50 <- c(temp_EMA5ahead50, NA)
+      temp_EMA10ahead50 <- c(temp_EMA10ahead50, NA)
+      temp_avgOpenClose_ahead50 <- c(temp_avgOpenClose_ahead50, NA)
+    }
+  }
+  if(is.null(new_columns)){
+    new_columns <- list(temp_rownames=temp_rownames,
+                        EMA5ahead5=temp_EMA5ahead5,
+                        EMA5ahead10=temp_EMA5ahead10,
+                        EMA10ahead10=temp_EMA10ahead10,
+                        EMA5ahead15=temp_EMA5ahead15,
+                        EMA10ahead15=temp_EMA10ahead15,
+                        EMA5ahead20=temp_EMA5ahead20,
+                        EMA10ahead20=temp_EMA10ahead20,
+                        EMA5ahead25=temp_EMA5ahead25,
+                        EMA10ahead25=temp_EMA10ahead25,
+                        EMA5ahead50=temp_EMA5ahead50,
+                        EMA10ahead50=temp_EMA10ahead50,
+                        avgOpenClose_ahead5=temp_avgOpenClose_ahead5,
+                        avgOpenClose_ahead10=temp_avgOpenClose_ahead10,
+                        avgOpenClose_ahead15=temp_avgOpenClose_ahead15,
+                        avgOpenClose_ahead20=temp_avgOpenClose_ahead20,
+                        avgOpenClose_ahead25=temp_avgOpenClose_ahead25,
+                        avgOpenClose_ahead50=temp_avgOpenClose_ahead50
+                        )
+  }else{
+    new_columns$temp_rownames <- c(new_columns$temp_rownames,temp_rownames)
+    new_columns$EMA5ahead5 <- c(new_columns$EMA5ahead5,temp_EMA5ahead5)
+    new_columns$EMA5ahead10 <- c(new_columns$EMA5ahead10,temp_EMA5ahead10)
+    new_columns$EMA10ahead10 <- c(new_columns$EMA10ahead10,temp_EMA10ahead10)
+    new_columns$EMA5ahead15 <- c(new_columns$EMA5ahead15,temp_EMA5ahead15)
+    new_columns$EMA10ahead15 <- c(new_columns$EMA10ahead15,temp_EMA10ahead15)
+    new_columns$EMA5ahead20 <- c(new_columns$EMA5ahead20,temp_EMA5ahead20)
+    new_columns$EMA10ahead20 <- c(new_columns$EMA10ahead20,temp_EMA10ahead20)
+    new_columns$EMA5ahead25 <- c(new_columns$EMA5ahead25,temp_EMA5ahead25)
+    new_columns$EMA10ahead25 <- c(new_columns$EMA10ahead25,temp_EMA10ahead25)
+    new_columns$EMA5ahead50 <- c(new_columns$EMA5ahead50,temp_EMA5ahead50)
+    new_columns$EMA10ahead50 <- c(new_columns$EMA10ahead50,temp_EMA10ahead50)
+    new_columns$avgOpenClose_ahead5 <- c(new_columns$avgOpenClose_ahead5,temp_avgOpenClose_ahead5)
+    new_columns$avgOpenClose_ahead10 <- c(new_columns$avgOpenClose_ahead10,temp_avgOpenClose_ahead10)
+    new_columns$avgOpenClose_ahead15 <- c(new_columns$avgOpenClose_ahead15,temp_avgOpenClose_ahead15)
+    new_columns$avgOpenClose_ahead20 <- c(new_columns$avgOpenClose_ahead20,temp_avgOpenClose_ahead20)
+    new_columns$avgOpenClose_ahead25 <- c(new_columns$avgOpenClose_ahead25,temp_avgOpenClose_ahead25)
+    new_columns$avgOpenClose_ahead50 <- c(new_columns$avgOpenClose_ahead50,temp_avgOpenClose_ahead50)
+  }
+  print(paste0("Finished with ",temp_ticker))
+  if(temp_ticker_i %% 10 == 0){
+    timestamp()
+  }
+}
+new_columns <- as.data.frame(new_columns)
+#temp_rownames <- unlist(lapply(new_columns$temp_rownames,function(x){str_replace_all(x,"-","")}))
+#rownames(new_columns) <- temp_rownames
+rownames(new_columns) <- new_columns$temp_rownames
+new_columns <- new_columns[,colnames(new_columns) != "temp_rownames"]
+#colnames(new_columns) <- paste0("comp_",colnames(new_columns))
+new_columns$EMA5ahead5 <- as.numeric(new_columns$EMA5ahead5)
+new_columns$EMA5ahead10 <- as.numeric(new_columns$EMA5ahead10)
+new_columns$EMA10ahead10 <- as.numeric(new_columns$EMA10ahead10)
+new_columns$EMA5ahead15 <- as.numeric(new_columns$EMA5ahead15)
+new_columns$EMA10ahead15 <- as.numeric(new_columns$EMA10ahead15)
+new_columns$EMA5ahead20 <- as.numeric(new_columns$EMA5ahead20)
+new_columns$EMA10ahead20 <- as.numeric(new_columns$EMA10ahead20)
+new_columns$EMA5ahead25 <- as.numeric(new_columns$EMA5ahead25)
+new_columns$EMA10ahead25 <- as.numeric(new_columns$EMA10ahead25)
+new_columns$EMA5ahead50 <- as.numeric(new_columns$EMA5ahead50)
+new_columns$EMA10ahead50 <- as.numeric(new_columns$EMA10ahead50)
+new_columns$avgOpenClose_ahead5 <- as.numeric(new_columns$avgOpenClose_ahead5)
+new_columns$avgOpenClose_ahead10 <- as.numeric(new_columns$avgOpenClose_ahead10)
+new_columns$avgOpenClose_ahead15 <- as.numeric(new_columns$avgOpenClose_ahead15)
+new_columns$avgOpenClose_ahead20 <- as.numeric(new_columns$avgOpenClose_ahead20)
+new_columns$avgOpenClose_ahead25 <- as.numeric(new_columns$avgOpenClose_ahead25)
+new_columns$avgOpenClose_ahead50 <- as.numeric(new_columns$avgOpenClose_ahead50)
+
+full_results <- full_results[rownames(full_results) %in% rownames(new_columns),]
+full_results <- cbind(full_results,new_columns[rownames(full_results),])
+
+temp_rownames <- unlist(lapply(rownames(full_results),function(x){str_replace_all(x,"-","")}))
+rownames(full_results) <- temp_rownames
+
+days_to_test <- c(5,10,15,20,25,50)
+pcts_to_test <- c(01,02,03,04,05,06,07,08,09,10,15,20,25,50)
+for(temp_day_i in 1:length(days_to_test)){
+  temp_day <- days_to_test[temp_day_i]
+  for(temp_pct_i in 1:length(pcts_to_test)){
+    temp_pct <- str_pad(pcts_to_test[temp_pct_i], width = 2, side = "left", pad = "0")
+    temp_pctVal <- as.numeric(paste0("1.",temp_pct))
+    temp_colname <- paste0("outcomes_",temp_day,"d",temp_pct,"pctEMA5above")
+    temp_EMACol <- paste0("EMA5ahead",temp_day)
+    full_results[,temp_colname] <- ((full_results[,temp_EMACol] / full_results[,"avgOpenClose"]) > temp_pctVal)
+    if(temp_day > 5){
+      temp_colname <- paste0("outcomes_",temp_day,"d",temp_pct,"pctEMA10above")
+      temp_EMACol <- paste0("EMA10ahead",temp_day)
+      full_results[,temp_colname] <- ((full_results[,temp_EMACol] / full_results[,"avgOpenClose"]) > temp_pctVal)
+    }
+  }
+  temp_colname <- paste0("outcomes_",temp_day,"d","0pctEMA5below")
+  temp_EMACol <- paste0("EMA5ahead",temp_day)
+  full_results[,temp_colname] <- (full_results[,"avgOpenClose"] > full_results[,temp_EMACol])
+  if(temp_day > 5){
+    temp_colname <- paste0("outcomes_",temp_day,"d","0pctEMA10below")
+    temp_EMACol <- paste0("EMA10ahead",temp_day)
+    full_results[,temp_colname] <- (full_results[,"avgOpenClose"] > full_results[,temp_EMACol])
+  }
+}
+
+
+###Parse input to match new outcomes
+merge_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/prefilter_merged_aggregate_for_NN_20210514_to_20240404.RDS")
+#merge_aggregate <- merge_aggregate[,!grepl("outcomes_",colnames(merge_aggregate))]
+
+match_aggregate <- merge_aggregate[rownames(merge_aggregate) %in% rownames(full_results),]
+match_comp <- full_results[rownames(match_aggregate),]
+match_aggregate <- cbind(match_aggregate,match_comp)
+
+###Add in relative EMA values
+match_aggregate$relative_EMA5 <- match_aggregate$EMA5 / match_aggregate$avgOpenClose
+match_aggregate$relative_EMA10 <- match_aggregate$EMA10 / match_aggregate$avgOpenClose
+match_aggregate$relative_EMA15 <- match_aggregate$EMA15 / match_aggregate$avgOpenClose
+match_aggregate$relative_EMA20 <- match_aggregate$EMA20 / match_aggregate$avgOpenClose
+match_aggregate$relative_EMA25 <- match_aggregate$EMA25 / match_aggregate$avgOpenClose
+match_aggregate$relative_EMA50 <- match_aggregate$EMA50 / match_aggregate$avgOpenClose
+
+match_aggregate$relative_avgOpenClose_ahead5 <- match_aggregate$avgOpenClose_ahead5 / match_aggregate$avgOpenClose
+match_aggregate$relative_avgOpenClose_ahead10 <- match_aggregate$avgOpenClose_ahead10 / match_aggregate$avgOpenClose
+match_aggregate$relative_avgOpenClose_ahead15 <- match_aggregate$avgOpenClose_ahead15 / match_aggregate$avgOpenClose
+match_aggregate$relative_avgOpenClose_ahead20 <- match_aggregate$avgOpenClose_ahead20 / match_aggregate$avgOpenClose
+match_aggregate$relative_avgOpenClose_ahead25 <- match_aggregate$avgOpenClose_ahead25 / match_aggregate$avgOpenClose
+match_aggregate$relative_avgOpenClose_ahead50 <- match_aggregate$avgOpenClose_ahead50 / match_aggregate$avgOpenClose
+
+##Remove rows with any NA values
+match_aggregate <- match_aggregate[rowSums(is.na(match_aggregate)) == 0,]
+match_aggregate[,grepl("FedInterestRate",colnames(match_aggregate)) | grepl("relative_",colnames(match_aggregate))] <- 
+  round(match_aggregate[,grepl("FedInterestRate",colnames(match_aggregate)) | grepl("relative_",colnames(match_aggregate))],3)
+
+test_input <- match_aggregate[,grepl("_volume_",colnames(match_aggregate)) | 
+                                          grepl("_open_interest_",colnames(match_aggregate))]
+test_input <- test_input + 1
+temp_logic <- grepl("EOD_",colnames(test_input))
+test_input[,temp_logic] <- test_input[,temp_logic] / rowSums(test_input[,temp_logic])
+temp_logic <- grepl("EMA5_",colnames(test_input))
+test_input[,temp_logic] <- test_input[,temp_logic] / rowSums(test_input[,temp_logic])
+temp_logic <- grepl("EMA10_",colnames(test_input))
+test_input[,temp_logic] <- test_input[,temp_logic] / rowSums(test_input[,temp_logic])
+temp_logic <- grepl("EMA20_",colnames(test_input))
+test_input[,temp_logic] <- test_input[,temp_logic] / rowSums(test_input[,temp_logic])
+temp_logic <- grepl("EMA50_",colnames(test_input))
+test_input[,temp_logic] <- test_input[,temp_logic] / rowSums(test_input[,temp_logic])
+test_input <- log10(test_input)
+robustScalerFxn <- function(x){
+    x <- ((x - median(x)) / IQR(x))
+}
+test_input <- test_input %>%
+    mutate(across(everything(), robustScalerFxn))
+
+extra_input <- match_aggregate[,grepl("_FedInterestRate",colnames(match_aggregate)) | grepl("relative_EMA",colnames(match_aggregate))]
+test_input <- cbind(test_input,extra_input)
+test_input <- round(test_input,3)
+extra_input <- match_aggregate[,grepl("underlying_stock_sector_",colnames(match_aggregate))]
+test_input <- cbind(test_input,extra_input)
+
+###
+
+test_group <- match_aggregate$outcomes_5d02pctEMA5above
+test_output = as.numeric(test_group)
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V3_5d02pctAbove_for_NN.tsv",sep="\t")
+
+test_group <- match_aggregate$outcomes_10d04pctEMA5above
+test_output = as.numeric(test_group)
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V3_10d04pctAbove_for_NN.tsv",sep="\t")
+
+test_group <- match_aggregate$outcomes_15d06pctEMA5above
+test_output = as.numeric(test_group)
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V3_15d06pctAbove_for_NN.tsv",sep="\t")
+
+test_group <- match_aggregate$outcomes_20d08pctEMA5above
+test_output = as.numeric(test_group)
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V3_20d08pctAbove_for_NN.tsv",sep="\t")
+
+test_group <- match_aggregate$outcomes_25d10pctEMA5above
+test_output = as.numeric(test_group)
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V3_25d10pctAbove_for_NN.tsv",sep="\t")
+
+test_group <- match_aggregate$outcomes_50d20pctEMA5above
+test_output = as.numeric(test_group)
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V3_50d20pctAbove_for_NN.tsv",sep="\t")
+
+test_group <- match_aggregate$outcomes_5d0pctEMA5below
+test_output = as.numeric(test_group)
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V3_5d0pctBelow_for_NN.tsv",sep="\t")
+
+test_group <- match_aggregate$outcomes_10d0pctEMA5below
+test_output = as.numeric(test_group)
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V3_10d0pctBelow_for_NN.tsv",sep="\t")
+
+test_group <- match_aggregate$outcomes_15d0pctEMA5below
+test_output = as.numeric(test_group)
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V3_15d0pctBelow_for_NN.tsv",sep="\t")
+
+test_group <- match_aggregate$outcomes_20d0pctEMA5below
+test_output = as.numeric(test_group)
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V3_20d0pctBelow_for_NN.tsv",sep="\t")
+
+test_group <- match_aggregate$outcomes_25d0pctEMA5below
+test_output = as.numeric(test_group)
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V3_25d0pctBelow_for_NN.tsv",sep="\t")
+
+test_group <- match_aggregate$outcomes_50d0pctEMA5below
+test_output = as.numeric(test_group)
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V3_50d0pctBelow_for_NN.tsv",sep="\t")
+
+write.table(match_aggregate$relative_avgOpenClose_ahead5,
+            file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V3_avgOpenClose5dAhead_for_NN.tsv",sep="\t")
+write.table(match_aggregate$relative_avgOpenClose_ahead10,
+            file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V3_avgOpenClose10dAhead_for_NN.tsv",sep="\t")
+write.table(match_aggregate$relative_avgOpenClose_ahead15,
+            file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V3_avgOpenClose15dAhead_for_NN.tsv",sep="\t")
+write.table(match_aggregate$relative_avgOpenClose_ahead20,
+            file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V3_avgOpenClose20dAhead_for_NN.tsv",sep="\t")
+write.table(match_aggregate$relative_avgOpenClose_ahead25,
+            file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V3_avgOpenClose25dAhead_for_NN.tsv",sep="\t")
+write.table(match_aggregate$relative_avgOpenClose_ahead50,
+            file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V3_avgOpenClose50dAhead_for_NN.tsv",sep="\t")
+
+###
+
+saveRDS(match_aggregate,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/matched_aggregate_V3_for_NN.RDS")
+write.table(t(test_input),file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_inputV3_for_NN.tsv",sep="\t")
+
+
+```
+
+```{r processing of daily predictions and merging with extra data}
+
+match_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/full_aggregate_V3_for_prediction_with_NN_20240314_to_20240429.RDS")
+
+prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/realtime_testing_predictions_merged4up10d_output.tsv",sep="\t")
+rownames(prediction_dataset) <- rownames(match_aggregate)
+prediction_dataset <- cbind(prediction_dataset,match_aggregate[rownames(prediction_dataset),])
+
+date_to_check <- "2024-04-15"
+##Select marketbeat date that is the next day after the date to check from the model prediction due to the timing of the data
+temp_mbData <- readRDS(paste0("E:/Market_Data/MarketBeat/MarketBeat_SP500_data_",as.Date(date_to_check,format = "%Y-%m-%d") + 1,".RDS"))
+temp_mbData <- temp_mbData[,c("analyst_rating","updownside","analyst_score","price_target",
+                              "short_interest","shares_sold_short","dividend_strength","sustainability_score",
+                              "news_sentiment","insider_trading","projected_earnings_growth")]
+
+temp_pred <- prediction_dataset[prediction_dataset$EOD_option_quote_date == date_to_check,]
+temp_pred <- cbind(temp_pred,temp_mbData[temp_pred$EOD_option_underlying_ticker,])
+test <- temp_pred[temp_pred$Predicted == "True",]
+test[1:5,c("Predicted","avgOpenClose","EOD_option_underlying_ticker","EOD_option_quote_date","relative_avgOpenClose_ahead10",
+           colnames(temp_mbData))]
+test_upside_val <- unlist(lapply(test$updownside,function(x){as.numeric(str_replace(str_split(x," ")[[1]][1],"%",""))}))
+test_upside_dir <- unlist(lapply(test$updownside,function(x){str_split(x," ")[[1]][2]}))
+test[test_upside_dir == "Upside" & test_upside_val > 40,c("Predicted","avgOpenClose","EOD_option_underlying_ticker",
+                                                          "EOD_option_quote_date","relative_avgOpenClose_ahead10",colnames(temp_mbData))]
+
 
 
 ```
