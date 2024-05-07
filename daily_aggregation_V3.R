@@ -1402,121 +1402,317 @@ for(temp_ticker_i in 1:length(all_tickers)){
   temp_ticker <- all_tickers[temp_ticker_i]
   sub_results <- full_results[full_results$Ticker == temp_ticker,]
   temp_rownames=c()
-  temp_avgOpenClose_ahead5=c()
-  temp_avgOpenClose_ahead10=c()
-  temp_avgOpenClose_ahead15=c()
-  temp_avgOpenClose_ahead20=c()
-  temp_avgOpenClose_ahead25=c()
-  temp_avgOpenClose_ahead50=c()
-  temp_EMA5ahead5=c()
-  temp_EMA5ahead10=c()
-  temp_EMA5ahead15=c()
-  temp_EMA5ahead20=c()
-  temp_EMA5ahead25=c()
-  temp_EMA5ahead50=c()
-  temp_EMA10ahead10=c()
-  temp_EMA10ahead15=c()
-  temp_EMA10ahead20=c()
-  temp_EMA10ahead25=c()
-  temp_EMA10ahead50=c()
+  for(temp_counter_i in 1:50){
+    assign(paste0("temp_EMA5ahead",temp_counter_i),c())
+    assign(paste0("temp_avgOpenClose_ahead",temp_counter_i),c())
+  }
+  #temp_avgOpenClose_ahead1=c()
+  #temp_avgOpenClose_ahead2=c()
+  #temp_avgOpenClose_ahead3=c()
+  #temp_avgOpenClose_ahead4=c()
+  #temp_avgOpenClose_ahead5=c()
+  #temp_avgOpenClose_ahead6=c()
+  #temp_avgOpenClose_ahead7=c()
+  #temp_avgOpenClose_ahead8=c()
+  #temp_avgOpenClose_ahead9=c()
+  #temp_avgOpenClose_ahead10=c()
+  #temp_avgOpenClose_ahead11=c()
+  #temp_avgOpenClose_ahead12=c()
+  #temp_avgOpenClose_ahead13=c()
+  #temp_avgOpenClose_ahead14=c()
+  #temp_avgOpenClose_ahead15=c()
+  #temp_avgOpenClose_ahead16=c()
+  #temp_avgOpenClose_ahead17=c()
+  #temp_avgOpenClose_ahead18=c()
+  #temp_avgOpenClose_ahead19=c()
+  #temp_avgOpenClose_ahead20=c()
+  #temp_avgOpenClose_ahead21=c()
+  #temp_avgOpenClose_ahead22=c()
+  #temp_avgOpenClose_ahead23=c()
+  #temp_avgOpenClose_ahead24=c()
+  #temp_avgOpenClose_ahead25=c()
+  #temp_avgOpenClose_ahead26=c()
+  #temp_avgOpenClose_ahead27=c()
+  #temp_avgOpenClose_ahead28=c()
+  #temp_avgOpenClose_ahead29=c()
+  #temp_avgOpenClose_ahead30=c()
+  #temp_avgOpenClose_ahead31=c()
+  #temp_avgOpenClose_ahead32=c()
+  #temp_avgOpenClose_ahead33=c()
+  #temp_avgOpenClose_ahead34=c()
+  #temp_avgOpenClose_ahead35=c()
+  #temp_avgOpenClose_ahead36=c()
+  #temp_avgOpenClose_ahead37=c()
+  #temp_avgOpenClose_ahead38=c()
+  #temp_avgOpenClose_ahead39=c()
+  #temp_avgOpenClose_ahead40=c()
+  #temp_avgOpenClose_ahead41=c()
+  #temp_avgOpenClose_ahead42=c()
+  #temp_avgOpenClose_ahead43=c()
+  #temp_avgOpenClose_ahead44=c()
+  #temp_avgOpenClose_ahead45=c()
+  #temp_avgOpenClose_ahead46=c()
+  #temp_avgOpenClose_ahead47=c()
+  #temp_avgOpenClose_ahead48=c()
+  #temp_avgOpenClose_ahead49=c()
+  #temp_avgOpenClose_ahead50=c()
+  #temp_EMA5ahead1=c()
+  #temp_EMA5ahead2=c()
+  #temp_EMA5ahead3=c()
+  #temp_EMA5ahead4=c()
+  #temp_EMA5ahead5=c()
+  #temp_EMA5ahead6=c()
+  #temp_EMA5ahead7=c()
+  #temp_EMA5ahead8=c()
+  #temp_EMA5ahead9=c()
+  #temp_EMA5ahead10=c()
+  #temp_EMA5ahead11=c()
+  #temp_EMA5ahead12=c()
+  #temp_EMA5ahead13=c()
+  #temp_EMA5ahead14=c()
+  #temp_EMA5ahead15=c()
+  #temp_EMA5ahead16=c()
+  #temp_EMA5ahead17=c()
+  #temp_EMA5ahead18=c()
+  #temp_EMA5ahead19=c()
+  #temp_EMA5ahead20=c()
+  #temp_EMA5ahead21=c()
+  #temp_EMA5ahead22=c()
+  #temp_EMA5ahead23=c()
+  #temp_EMA5ahead24=c()
+  #temp_EMA5ahead25=c()
+  #temp_EMA5ahead26=c()
+  #temp_EMA5ahead27=c()
+  #temp_EMA5ahead28=c()
+  #temp_EMA5ahead29=c()
+  #temp_EMA5ahead30=c()
+  #temp_EMA5ahead31=c()
+  #temp_EMA5ahead32=c()
+  #temp_EMA5ahead33=c()
+  #temp_EMA5ahead34=c()
+  #temp_EMA5ahead35=c()
+  #temp_EMA5ahead36=c()
+  #temp_EMA5ahead37=c()
+  #temp_EMA5ahead38=c()
+  #temp_EMA5ahead39=c()
+  #temp_EMA5ahead40=c()
+  #temp_EMA5ahead41=c()
+  #temp_EMA5ahead42=c()
+  #temp_EMA5ahead43=c()
+  #temp_EMA5ahead44=c()
+  #temp_EMA5ahead45=c()
+  #temp_EMA5ahead46=c()
+  #temp_EMA5ahead47=c()
+  #temp_EMA5ahead48=c()
+  #temp_EMA5ahead49=c()
+  #temp_EMA5ahead50=c()
   for(temp_date_i in 1:nrow(sub_results)){
     temp_rownames <- c(temp_rownames,rownames(sub_results)[temp_date_i])
-    if(nrow(sub_results) >= (temp_date_i + 5)){
-      temp_EMA5ahead5 <- c(temp_EMA5ahead5,sub_results$EMA5[(temp_date_i + 5)])
-      temp_avgOpenClose_ahead5 <- c(temp_avgOpenClose_ahead5,sub_results$avgOpenClose[(temp_date_i + 5)])
-    }else{
-      temp_EMA5ahead5 <- c(temp_EMA5ahead5, NA)
-      temp_avgOpenClose_ahead5 <- c(temp_avgOpenClose_ahead5, NA)
-    }
-    if(nrow(sub_results) >= (temp_date_i + 10)){
-      temp_EMA5ahead10 <- c(temp_EMA5ahead10,sub_results$EMA5[(temp_date_i + 10)])
-      temp_EMA10ahead10 <- c(temp_EMA10ahead10,sub_results$EMA10[(temp_date_i + 10)])
-      temp_avgOpenClose_ahead10 <- c(temp_avgOpenClose_ahead10,sub_results$avgOpenClose[(temp_date_i + 10)])
-    }else{
-      temp_EMA5ahead10 <- c(temp_EMA5ahead10, NA)
-      temp_EMA10ahead10 <- c(temp_EMA10ahead10, NA)
-      temp_avgOpenClose_ahead10 <- c(temp_avgOpenClose_ahead10, NA)
+    for(temp_counter_i in 1:50){
+      if(nrow(sub_results) >= (temp_date_i + temp_counter_i)){
+        assign(paste0("temp_EMA5ahead",temp_counter_i),c(get(paste0("temp_EMA5ahead",temp_counter_i)),sub_results$EMA5[(temp_date_i + temp_counter_i)]))
+        assign(paste0("temp_avgOpenClose_ahead",temp_counter_i),c(get(paste0("temp_avgOpenClose_ahead",temp_counter_i)),sub_results$avgOpenClose[(temp_date_i + temp_counter_i)]))
+      }else{
+        assign(paste0("temp_EMA5ahead",temp_counter_i),c(get(paste0("temp_EMA5ahead",temp_counter_i)),NA))
+        assign(paste0("temp_avgOpenClose_ahead",temp_counter_i),c(get(paste0("temp_avgOpenClose_ahead",temp_counter_i)),NA))
+      }
     }
     
-    if(nrow(sub_results) >= (temp_date_i + 15)){
-      temp_EMA5ahead15 <- c(temp_EMA5ahead15,sub_results$EMA5[(temp_date_i + 15)])
-      temp_EMA10ahead15 <- c(temp_EMA10ahead15,sub_results$EMA10[(temp_date_i + 15)])
-      temp_avgOpenClose_ahead15 <- c(temp_avgOpenClose_ahead15,sub_results$avgOpenClose[(temp_date_i + 15)])
-    }else{
-      temp_EMA5ahead15 <- c(temp_EMA5ahead15, NA)
-      temp_EMA10ahead15 <- c(temp_EMA10ahead15, NA)
-      temp_avgOpenClose_ahead15 <- c(temp_avgOpenClose_ahead15, NA)
-    }
+    #if(nrow(sub_results) >= (temp_date_i + 5)){
+    #  temp_EMA5ahead5 <- c(temp_EMA5ahead5,sub_results$EMA5[(temp_date_i + 5)])
+    #  temp_avgOpenClose_ahead5 <- c(temp_avgOpenClose_ahead5,sub_results$avgOpenClose[(temp_date_i + 5)])
+    #}else{
+    #  temp_EMA5ahead5 <- c(temp_EMA5ahead5, NA)
+    #  temp_avgOpenClose_ahead5 <- c(temp_avgOpenClose_ahead5, NA)
+    #}
+    #if(nrow(sub_results) >= (temp_date_i + 10)){
+    #  temp_EMA5ahead10 <- c(temp_EMA5ahead10,sub_results$EMA5[(temp_date_i + 10)])
+    #  temp_EMA10ahead10 <- c(temp_EMA10ahead10,sub_results$EMA10[(temp_date_i + 10)])
+    #  temp_avgOpenClose_ahead10 <- c(temp_avgOpenClose_ahead10,sub_results$avgOpenClose[(temp_date_i + 10)])
+    #}else{
+    #  temp_EMA5ahead10 <- c(temp_EMA5ahead10, NA)
+    #  temp_EMA10ahead10 <- c(temp_EMA10ahead10, NA)
+    #  temp_avgOpenClose_ahead10 <- c(temp_avgOpenClose_ahead10, NA)
+    #}
     
-    if(nrow(sub_results) >= (temp_date_i + 20)){
-      temp_EMA5ahead20 <- c(temp_EMA5ahead20,sub_results$EMA5[(temp_date_i + 20)])
-      temp_EMA10ahead20 <- c(temp_EMA10ahead20,sub_results$EMA10[(temp_date_i + 20)])
-      temp_avgOpenClose_ahead20 <- c(temp_avgOpenClose_ahead20,sub_results$avgOpenClose[(temp_date_i + 20)])
-    }else{
-      temp_EMA5ahead20 <- c(temp_EMA5ahead20, NA)
-      temp_EMA10ahead20 <- c(temp_EMA10ahead20, NA)
-      temp_avgOpenClose_ahead20 <- c(temp_avgOpenClose_ahead20, NA)
-    }
+    #if(nrow(sub_results) >= (temp_date_i + 15)){
+    #  temp_EMA5ahead15 <- c(temp_EMA5ahead15,sub_results$EMA5[(temp_date_i + 15)])
+    #  temp_EMA10ahead15 <- c(temp_EMA10ahead15,sub_results$EMA10[(temp_date_i + 15)])
+    #  temp_avgOpenClose_ahead15 <- c(temp_avgOpenClose_ahead15,sub_results$avgOpenClose[(temp_date_i + 15)])
+    #}else{
+    #  temp_EMA5ahead15 <- c(temp_EMA5ahead15, NA)
+    #  temp_EMA10ahead15 <- c(temp_EMA10ahead15, NA)
+    #  temp_avgOpenClose_ahead15 <- c(temp_avgOpenClose_ahead15, NA)
+    #}
     
-    if(nrow(sub_results) >= (temp_date_i + 25)){
-      temp_EMA5ahead25 <- c(temp_EMA5ahead25,sub_results$EMA5[(temp_date_i + 25)])
-      temp_EMA10ahead25 <- c(temp_EMA10ahead25,sub_results$EMA10[(temp_date_i + 25)])
-      temp_avgOpenClose_ahead25 <- c(temp_avgOpenClose_ahead25,sub_results$avgOpenClose[(temp_date_i + 25)])
-    }else{
-      temp_EMA5ahead25 <- c(temp_EMA5ahead25, NA)
-      temp_EMA10ahead25 <- c(temp_EMA10ahead25, NA)
-      temp_avgOpenClose_ahead25 <- c(temp_avgOpenClose_ahead25, NA)
-    }
+    #if(nrow(sub_results) >= (temp_date_i + 20)){
+    #  temp_EMA5ahead20 <- c(temp_EMA5ahead20,sub_results$EMA5[(temp_date_i + 20)])
+    #  temp_EMA10ahead20 <- c(temp_EMA10ahead20,sub_results$EMA10[(temp_date_i + 20)])
+    #  temp_avgOpenClose_ahead20 <- c(temp_avgOpenClose_ahead20,sub_results$avgOpenClose[(temp_date_i + 20)])
+    #}else{
+    #  temp_EMA5ahead20 <- c(temp_EMA5ahead20, NA)
+    #  temp_EMA10ahead20 <- c(temp_EMA10ahead20, NA)
+    #  temp_avgOpenClose_ahead20 <- c(temp_avgOpenClose_ahead20, NA)
+    #}
+   
+    #if(nrow(sub_results) >= (temp_date_i + 25)){
+    #  temp_EMA5ahead25 <- c(temp_EMA5ahead25,sub_results$EMA5[(temp_date_i + 25)])
+    #  temp_EMA10ahead25 <- c(temp_EMA10ahead25,sub_results$EMA10[(temp_date_i + 25)])
+    #  temp_avgOpenClose_ahead25 <- c(temp_avgOpenClose_ahead25,sub_results$avgOpenClose[(temp_date_i + 25)])
+    #}else{
+    #  temp_EMA5ahead25 <- c(temp_EMA5ahead25, NA)
+    #  temp_EMA10ahead25 <- c(temp_EMA10ahead25, NA)
+    #  temp_avgOpenClose_ahead25 <- c(temp_avgOpenClose_ahead25, NA)
+    #}
     
-    if(nrow(sub_results) >= (temp_date_i + 50)){
-      temp_EMA5ahead50 <- c(temp_EMA5ahead50,sub_results$EMA5[(temp_date_i + 50)])
-      temp_EMA10ahead50 <- c(temp_EMA10ahead50,sub_results$EMA10[(temp_date_i + 50)])
-      temp_avgOpenClose_ahead50 <- c(temp_avgOpenClose_ahead50,sub_results$avgOpenClose[(temp_date_i + 50)])
-    }else{
-      temp_EMA5ahead50 <- c(temp_EMA5ahead50, NA)
-      temp_EMA10ahead50 <- c(temp_EMA10ahead50, NA)
-      temp_avgOpenClose_ahead50 <- c(temp_avgOpenClose_ahead50, NA)
-    }
+    #if(nrow(sub_results) >= (temp_date_i + 50)){
+    #  temp_EMA5ahead50 <- c(temp_EMA5ahead50,sub_results$EMA5[(temp_date_i + 50)])
+    #  temp_EMA10ahead50 <- c(temp_EMA10ahead50,sub_results$EMA10[(temp_date_i + 50)])
+    #  temp_avgOpenClose_ahead50 <- c(temp_avgOpenClose_ahead50,sub_results$avgOpenClose[(temp_date_i + 50)])
+    #}else{
+    #  temp_EMA5ahead50 <- c(temp_EMA5ahead50, NA)
+    #  temp_EMA10ahead50 <- c(temp_EMA10ahead50, NA)
+    #  temp_avgOpenClose_ahead50 <- c(temp_avgOpenClose_ahead50, NA)
+    #}
   }
   if(is.null(new_columns)){
-    new_columns <- list(temp_rownames=temp_rownames,
-                        EMA5ahead5=temp_EMA5ahead5,
-                        EMA5ahead10=temp_EMA5ahead10,
-                        EMA10ahead10=temp_EMA10ahead10,
-                        EMA5ahead15=temp_EMA5ahead15,
-                        EMA10ahead15=temp_EMA10ahead15,
-                        EMA5ahead20=temp_EMA5ahead20,
-                        EMA10ahead20=temp_EMA10ahead20,
-                        EMA5ahead25=temp_EMA5ahead25,
-                        EMA10ahead25=temp_EMA10ahead25,
-                        EMA5ahead50=temp_EMA5ahead50,
-                        EMA10ahead50=temp_EMA10ahead50,
-                        avgOpenClose_ahead5=temp_avgOpenClose_ahead5,
-                        avgOpenClose_ahead10=temp_avgOpenClose_ahead10,
-                        avgOpenClose_ahead15=temp_avgOpenClose_ahead15,
-                        avgOpenClose_ahead20=temp_avgOpenClose_ahead20,
-                        avgOpenClose_ahead25=temp_avgOpenClose_ahead25,
-                        avgOpenClose_ahead50=temp_avgOpenClose_ahead50
-    )
+    new_columns <- list(temp_rownames=temp_rownames)
+    for(temp_counter_i in 1:50){
+      new_columns <- c(new_columns, list(get(paste0("temp_EMA5ahead",temp_counter_i))))
+      names(new_columns)[temp_counter_i+1] <- paste0("EMA5ahead",temp_counter_i)
+    }
+    for(temp_counter_i in 1:50){
+      new_columns <- c(new_columns, list(get(paste0("temp_avgOpenClose_ahead",temp_counter_i))))
+      names(new_columns)[temp_counter_i+51] <- paste0("avgOpenClose_ahead",temp_counter_i)
+    }
+    
+    #new_columns <- list(temp_rownames=temp_rownames,
+    #                    EMA5ahead1=temp_EMA5ahead1,
+    #                    EMA5ahead2=temp_EMA5ahead2,
+    #                    EMA5ahead3=temp_EMA5ahead3,
+    #                    EMA5ahead4=temp_EMA5ahead4,
+    #                    EMA5ahead5=temp_EMA5ahead5,
+    #                    EMA5ahead6=temp_EMA5ahead6,
+    #                    EMA5ahead7=temp_EMA5ahead7,
+    #                    EMA5ahead8=temp_EMA5ahead8,
+    #                    EMA5ahead9=temp_EMA5ahead9,
+    #                    EMA5ahead10=temp_EMA5ahead10,
+    #                    EMA5ahead11=temp_EMA5ahead11,
+    #                    EMA5ahead12=temp_EMA5ahead12,
+    #                    EMA5ahead13=temp_EMA5ahead13,
+    #                    EMA5ahead14=temp_EMA5ahead14,
+    #                    EMA5ahead15=temp_EMA5ahead15,
+    #                    EMA5ahead16=temp_EMA5ahead16,
+    #                    EMA5ahead17=temp_EMA5ahead17,
+    #                    EMA5ahead18=temp_EMA5ahead18,
+    #                    EMA5ahead19=temp_EMA5ahead19,
+    #                    EMA5ahead20=temp_EMA5ahead20,
+    #                    EMA5ahead21=temp_EMA5ahead21,
+    #                    EMA5ahead22=temp_EMA5ahead22,
+    #                    EMA5ahead23=temp_EMA5ahead23,
+    #                    EMA5ahead24=temp_EMA5ahead24,
+    #                    EMA5ahead25=temp_EMA5ahead25,
+    #                    EMA5ahead26=temp_EMA5ahead26,
+    #                    EMA5ahead27=temp_EMA5ahead27,
+    #                    EMA5ahead28=temp_EMA5ahead28,
+    #                    EMA5ahead29=temp_EMA5ahead29,
+    #                    EMA5ahead30=temp_EMA5ahead30,
+    #                    EMA5ahead31=temp_EMA5ahead31,
+    #                    EMA5ahead32=temp_EMA5ahead32,
+    #                    EMA5ahead33=temp_EMA5ahead33,
+    #                    EMA5ahead34=temp_EMA5ahead34,
+    #                    EMA5ahead35=temp_EMA5ahead35,
+    #                    EMA5ahead36=temp_EMA5ahead36,
+    #                    EMA5ahead37=temp_EMA5ahead37,
+    #                    EMA5ahead38=temp_EMA5ahead38,
+    #                    EMA5ahead39=temp_EMA5ahead39,
+    #                    EMA5ahead40=temp_EMA5ahead40,
+    #                    EMA5ahead41=temp_EMA5ahead41,
+    #                    EMA5ahead42=temp_EMA5ahead42,
+    #                    EMA5ahead43=temp_EMA5ahead43,
+    #                    EMA5ahead44=temp_EMA5ahead44,
+    #                    EMA5ahead45=temp_EMA5ahead45,
+    #                    EMA5ahead46=temp_EMA5ahead46,
+    #                    EMA5ahead47=temp_EMA5ahead47,
+    #                    EMA5ahead48=temp_EMA5ahead48,
+    #                    EMA5ahead49=temp_EMA5ahead49,
+    #                    EMA5ahead50=temp_EMA5ahead50,
+    #                    avgOpenClose_ahead1=temp_avgOpenClose_ahead1,
+    #                    avgOpenClose_ahead2=temp_avgOpenClose_ahead2,
+    #                    avgOpenClose_ahead3=temp_avgOpenClose_ahead3,
+    #                    avgOpenClose_ahead4=temp_avgOpenClose_ahead4,
+    #                    avgOpenClose_ahead5=temp_avgOpenClose_ahead5,
+    #                    avgOpenClose_ahead6=temp_avgOpenClose_ahead6,
+    #                    avgOpenClose_ahead7=temp_avgOpenClose_ahead7,
+    #                    avgOpenClose_ahead8=temp_avgOpenClose_ahead8,
+    #                    avgOpenClose_ahead9=temp_avgOpenClose_ahead9,
+    #                    avgOpenClose_ahead10=temp_avgOpenClose_ahead10,
+    #                    avgOpenClose_ahead11=temp_avgOpenClose_ahead11,
+    #                    avgOpenClose_ahead12=temp_avgOpenClose_ahead12,
+    #                    avgOpenClose_ahead13=temp_avgOpenClose_ahead13,
+    #                    avgOpenClose_ahead14=temp_avgOpenClose_ahead14,
+    #                    avgOpenClose_ahead15=temp_avgOpenClose_ahead15,
+    #                    avgOpenClose_ahead16=temp_avgOpenClose_ahead16,
+    #                    avgOpenClose_ahead17=temp_avgOpenClose_ahead17,
+    #                    avgOpenClose_ahead18=temp_avgOpenClose_ahead18,
+    #                    avgOpenClose_ahead19=temp_avgOpenClose_ahead19,
+    #                    avgOpenClose_ahead20=temp_avgOpenClose_ahead20,
+    #                    avgOpenClose_ahead21=temp_avgOpenClose_ahead21,
+    #                    avgOpenClose_ahead22=temp_avgOpenClose_ahead22,
+    #                    avgOpenClose_ahead23=temp_avgOpenClose_ahead23,
+    #                    avgOpenClose_ahead24=temp_avgOpenClose_ahead24,
+    #                    avgOpenClose_ahead25=temp_avgOpenClose_ahead25,
+    #                    avgOpenClose_ahead26=temp_avgOpenClose_ahead26,
+    #                    avgOpenClose_ahead27=temp_avgOpenClose_ahead27,
+    #                    avgOpenClose_ahead28=temp_avgOpenClose_ahead28,
+    #                    avgOpenClose_ahead29=temp_avgOpenClose_ahead29,
+    #                    avgOpenClose_ahead30=temp_avgOpenClose_ahead30,
+    #                    avgOpenClose_ahead31=temp_avgOpenClose_ahead31,
+    #                    avgOpenClose_ahead32=temp_avgOpenClose_ahead32,
+    #                    avgOpenClose_ahead33=temp_avgOpenClose_ahead33,
+    #                    avgOpenClose_ahead34=temp_avgOpenClose_ahead34,
+    #                    avgOpenClose_ahead35=temp_avgOpenClose_ahead35,
+    #                    avgOpenClose_ahead36=temp_avgOpenClose_ahead36,
+    #                    avgOpenClose_ahead37=temp_avgOpenClose_ahead37,
+    #                    avgOpenClose_ahead38=temp_avgOpenClose_ahead38,
+    #                    avgOpenClose_ahead39=temp_avgOpenClose_ahead39,
+    #                    avgOpenClose_ahead40=temp_avgOpenClose_ahead40,
+    #                    avgOpenClose_ahead41=temp_avgOpenClose_ahead41,
+    #                    avgOpenClose_ahead42=temp_avgOpenClose_ahead42,
+    #                    avgOpenClose_ahead43=temp_avgOpenClose_ahead43,
+    #                    avgOpenClose_ahead44=temp_avgOpenClose_ahead44,
+    #                    avgOpenClose_ahead45=temp_avgOpenClose_ahead45,
+    #                    avgOpenClose_ahead46=temp_avgOpenClose_ahead46,
+    #                    avgOpenClose_ahead47=temp_avgOpenClose_ahead47,
+    #                    avgOpenClose_ahead48=temp_avgOpenClose_ahead48,
+    #                    avgOpenClose_ahead49=temp_avgOpenClose_ahead49,
+    #                    avgOpenClose_ahead50=temp_avgOpenClose_ahead50
+    #)
   }else{
     new_columns$temp_rownames <- c(new_columns$temp_rownames,temp_rownames)
-    new_columns$EMA5ahead5 <- c(new_columns$EMA5ahead5,temp_EMA5ahead5)
-    new_columns$EMA5ahead10 <- c(new_columns$EMA5ahead10,temp_EMA5ahead10)
-    new_columns$EMA10ahead10 <- c(new_columns$EMA10ahead10,temp_EMA10ahead10)
-    new_columns$EMA5ahead15 <- c(new_columns$EMA5ahead15,temp_EMA5ahead15)
-    new_columns$EMA10ahead15 <- c(new_columns$EMA10ahead15,temp_EMA10ahead15)
-    new_columns$EMA5ahead20 <- c(new_columns$EMA5ahead20,temp_EMA5ahead20)
-    new_columns$EMA10ahead20 <- c(new_columns$EMA10ahead20,temp_EMA10ahead20)
-    new_columns$EMA5ahead25 <- c(new_columns$EMA5ahead25,temp_EMA5ahead25)
-    new_columns$EMA10ahead25 <- c(new_columns$EMA10ahead25,temp_EMA10ahead25)
-    new_columns$EMA5ahead50 <- c(new_columns$EMA5ahead50,temp_EMA5ahead50)
-    new_columns$EMA10ahead50 <- c(new_columns$EMA10ahead50,temp_EMA10ahead50)
-    new_columns$avgOpenClose_ahead5 <- c(new_columns$avgOpenClose_ahead5,temp_avgOpenClose_ahead5)
-    new_columns$avgOpenClose_ahead10 <- c(new_columns$avgOpenClose_ahead10,temp_avgOpenClose_ahead10)
-    new_columns$avgOpenClose_ahead15 <- c(new_columns$avgOpenClose_ahead15,temp_avgOpenClose_ahead15)
-    new_columns$avgOpenClose_ahead20 <- c(new_columns$avgOpenClose_ahead20,temp_avgOpenClose_ahead20)
-    new_columns$avgOpenClose_ahead25 <- c(new_columns$avgOpenClose_ahead25,temp_avgOpenClose_ahead25)
-    new_columns$avgOpenClose_ahead50 <- c(new_columns$avgOpenClose_ahead50,temp_avgOpenClose_ahead50)
+    for(temp_counter_i in 1:50){
+      new_columns[[paste0("EMA5ahead",temp_counter_i)]] <- c(new_columns[[paste0("EMA5ahead",temp_counter_i)]], get(paste0("temp_EMA5ahead",temp_counter_i)))
+      new_columns[[paste0("avgOpenClose_ahead",temp_counter_i)]] <- c(new_columns[[paste0("avgOpenClose_ahead",temp_counter_i)]], get(paste0("temp_avgOpenClose_ahead",temp_counter_i)))
+    }
+    
+    
+    #new_columns$EMA5ahead5 <- c(new_columns$EMA5ahead5,temp_EMA5ahead5)
+    #new_columns$EMA5ahead10 <- c(new_columns$EMA5ahead10,temp_EMA5ahead10)
+    #new_columns$EMA10ahead10 <- c(new_columns$EMA10ahead10,temp_EMA10ahead10)
+    #new_columns$EMA5ahead15 <- c(new_columns$EMA5ahead15,temp_EMA5ahead15)
+    #new_columns$EMA10ahead15 <- c(new_columns$EMA10ahead15,temp_EMA10ahead15)
+    #new_columns$EMA5ahead20 <- c(new_columns$EMA5ahead20,temp_EMA5ahead20)
+    #new_columns$EMA10ahead20 <- c(new_columns$EMA10ahead20,temp_EMA10ahead20)
+    #new_columns$EMA5ahead25 <- c(new_columns$EMA5ahead25,temp_EMA5ahead25)
+    #new_columns$EMA10ahead25 <- c(new_columns$EMA10ahead25,temp_EMA10ahead25)
+    #new_columns$EMA5ahead50 <- c(new_columns$EMA5ahead50,temp_EMA5ahead50)
+    #new_columns$EMA10ahead50 <- c(new_columns$EMA10ahead50,temp_EMA10ahead50)
+    #new_columns$avgOpenClose_ahead5 <- c(new_columns$avgOpenClose_ahead5,temp_avgOpenClose_ahead5)
+    #new_columns$avgOpenClose_ahead10 <- c(new_columns$avgOpenClose_ahead10,temp_avgOpenClose_ahead10)
+    #new_columns$avgOpenClose_ahead15 <- c(new_columns$avgOpenClose_ahead15,temp_avgOpenClose_ahead15)
+    #new_columns$avgOpenClose_ahead20 <- c(new_columns$avgOpenClose_ahead20,temp_avgOpenClose_ahead20)
+    #new_columns$avgOpenClose_ahead25 <- c(new_columns$avgOpenClose_ahead25,temp_avgOpenClose_ahead25)
+    #new_columns$avgOpenClose_ahead50 <- c(new_columns$avgOpenClose_ahead50,temp_avgOpenClose_ahead50)
   }
   print(paste0("Finished with ",temp_ticker))
   if(temp_ticker_i %% 10 == 0){
@@ -1529,23 +1725,28 @@ new_columns <- as.data.frame(new_columns)
 rownames(new_columns) <- new_columns$temp_rownames
 new_columns <- new_columns[,colnames(new_columns) != "temp_rownames"]
 #colnames(new_columns) <- paste0("comp_",colnames(new_columns))
-new_columns$EMA5ahead5 <- as.numeric(new_columns$EMA5ahead5)
-new_columns$EMA5ahead10 <- as.numeric(new_columns$EMA5ahead10)
-new_columns$EMA10ahead10 <- as.numeric(new_columns$EMA10ahead10)
-new_columns$EMA5ahead15 <- as.numeric(new_columns$EMA5ahead15)
-new_columns$EMA10ahead15 <- as.numeric(new_columns$EMA10ahead15)
-new_columns$EMA5ahead20 <- as.numeric(new_columns$EMA5ahead20)
-new_columns$EMA10ahead20 <- as.numeric(new_columns$EMA10ahead20)
-new_columns$EMA5ahead25 <- as.numeric(new_columns$EMA5ahead25)
-new_columns$EMA10ahead25 <- as.numeric(new_columns$EMA10ahead25)
-new_columns$EMA5ahead50 <- as.numeric(new_columns$EMA5ahead50)
-new_columns$EMA10ahead50 <- as.numeric(new_columns$EMA10ahead50)
-new_columns$avgOpenClose_ahead5 <- as.numeric(new_columns$avgOpenClose_ahead5)
-new_columns$avgOpenClose_ahead10 <- as.numeric(new_columns$avgOpenClose_ahead10)
-new_columns$avgOpenClose_ahead15 <- as.numeric(new_columns$avgOpenClose_ahead15)
-new_columns$avgOpenClose_ahead20 <- as.numeric(new_columns$avgOpenClose_ahead20)
-new_columns$avgOpenClose_ahead25 <- as.numeric(new_columns$avgOpenClose_ahead25)
-new_columns$avgOpenClose_ahead50 <- as.numeric(new_columns$avgOpenClose_ahead50)
+for(temp_counter_i in 1:50){
+  new_columns[,paste0("EMA5ahead",temp_counter_i)] <- as.numeric(new_columns[,paste0("EMA5ahead",temp_counter_i)])
+  new_columns[,paste0("avgOpenClose_ahead",temp_counter_i)] <- as.numeric(new_columns[,paste0("avgOpenClose_ahead",temp_counter_i)])
+}
+
+#new_columns$EMA5ahead5 <- as.numeric(new_columns$EMA5ahead5)
+#new_columns$EMA5ahead10 <- as.numeric(new_columns$EMA5ahead10)
+#new_columns$EMA10ahead10 <- as.numeric(new_columns$EMA10ahead10)
+#new_columns$EMA5ahead15 <- as.numeric(new_columns$EMA5ahead15)
+#new_columns$EMA10ahead15 <- as.numeric(new_columns$EMA10ahead15)
+#new_columns$EMA5ahead20 <- as.numeric(new_columns$EMA5ahead20)
+#new_columns$EMA10ahead20 <- as.numeric(new_columns$EMA10ahead20)
+#new_columns$EMA5ahead25 <- as.numeric(new_columns$EMA5ahead25)
+#new_columns$EMA10ahead25 <- as.numeric(new_columns$EMA10ahead25)
+#new_columns$EMA5ahead50 <- as.numeric(new_columns$EMA5ahead50)
+#new_columns$EMA10ahead50 <- as.numeric(new_columns$EMA10ahead50)
+#new_columns$avgOpenClose_ahead5 <- as.numeric(new_columns$avgOpenClose_ahead5)
+#new_columns$avgOpenClose_ahead10 <- as.numeric(new_columns$avgOpenClose_ahead10)
+#new_columns$avgOpenClose_ahead15 <- as.numeric(new_columns$avgOpenClose_ahead15)
+#new_columns$avgOpenClose_ahead20 <- as.numeric(new_columns$avgOpenClose_ahead20)
+#new_columns$avgOpenClose_ahead25 <- as.numeric(new_columns$avgOpenClose_ahead25)
+#new_columns$avgOpenClose_ahead50 <- as.numeric(new_columns$avgOpenClose_ahead50)
 
 full_results <- full_results[rownames(full_results) %in% rownames(new_columns),]
 full_results <- cbind(full_results,new_columns[rownames(full_results),])
@@ -1567,12 +1768,15 @@ match_aggregate$relative_EMA20 <- match_aggregate$EMA20 / match_aggregate$avgOpe
 match_aggregate$relative_EMA25 <- match_aggregate$EMA25 / match_aggregate$avgOpenClose
 match_aggregate$relative_EMA50 <- match_aggregate$EMA50 / match_aggregate$avgOpenClose
 
-match_aggregate$relative_avgOpenClose_ahead5 <- match_aggregate$avgOpenClose_ahead5 / match_aggregate$avgOpenClose
-match_aggregate$relative_avgOpenClose_ahead10 <- match_aggregate$avgOpenClose_ahead10 / match_aggregate$avgOpenClose
-match_aggregate$relative_avgOpenClose_ahead15 <- match_aggregate$avgOpenClose_ahead15 / match_aggregate$avgOpenClose
-match_aggregate$relative_avgOpenClose_ahead20 <- match_aggregate$avgOpenClose_ahead20 / match_aggregate$avgOpenClose
-match_aggregate$relative_avgOpenClose_ahead25 <- match_aggregate$avgOpenClose_ahead25 / match_aggregate$avgOpenClose
-match_aggregate$relative_avgOpenClose_ahead50 <- match_aggregate$avgOpenClose_ahead50 / match_aggregate$avgOpenClose
+for(temp_counter_i in 1:50){
+ match_aggregate[,paste0("relative_avgOpenClose_ahead",temp_counter_i)] <- match_aggregate[,paste0("avgOpenClose_ahead",temp_counter_i)] / match_aggregate$avgOpenClose
+}
+#match_aggregate$relative_avgOpenClose_ahead5 <- match_aggregate$avgOpenClose_ahead5 / match_aggregate$avgOpenClose
+#match_aggregate$relative_avgOpenClose_ahead10 <- match_aggregate$avgOpenClose_ahead10 / match_aggregate$avgOpenClose
+#match_aggregate$relative_avgOpenClose_ahead15 <- match_aggregate$avgOpenClose_ahead15 / match_aggregate$avgOpenClose
+#match_aggregate$relative_avgOpenClose_ahead20 <- match_aggregate$avgOpenClose_ahead20 / match_aggregate$avgOpenClose
+#match_aggregate$relative_avgOpenClose_ahead25 <- match_aggregate$avgOpenClose_ahead25 / match_aggregate$avgOpenClose
+#match_aggregate$relative_avgOpenClose_ahead50 <- match_aggregate$avgOpenClose_ahead50 / match_aggregate$avgOpenClose
 
 ##Remove rows with any NA values
 match_aggregate <- match_aggregate[rowSums(is.na(match_aggregate[,!grepl("ahead",colnames(match_aggregate))])) == 0,]

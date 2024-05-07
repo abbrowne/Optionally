@@ -2653,28 +2653,77 @@ write.table(t(test_input),file="E:/Market_Data/DiscountOptionData/DTNSubscriptio
 
 ```{r processing of daily predictions and merging with extra data}
 
-match_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/full_aggregate_V3_for_prediction_with_NN_20240314_to_20240429.RDS")
+library(data.table)  # For efficient data manipulation and reading
+library(parallel)    # For parallel processing
+library(bizdays)     # For business days calculation
+library(stringr)
+library(dplyr)
 
-prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/realtime_testing_predictions_merged4up10d_output.tsv",sep="\t")
+match_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/full_aggregate_V3_for_prediction_with_NN_20240314_to_20240506.RDS")
+
+prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/realtime_data_predictions_working_model_V3_primary2up5d_output.tsv",sep="\t")
 rownames(prediction_dataset) <- rownames(match_aggregate)
-prediction_dataset <- cbind(prediction_dataset,match_aggregate[rownames(prediction_dataset),])
+match_aggregate$prediction_2up5d <- prediction_dataset$Predicted
+prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/realtime_data_predictions_working_model_V3_primary4up10d_output.tsv",sep="\t")
+rownames(prediction_dataset) <- rownames(match_aggregate)
+match_aggregate$prediction_4up10d <- prediction_dataset$Predicted
+prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/realtime_data_predictions_working_model_V3_primary6up15d_output.tsv",sep="\t")
+rownames(prediction_dataset) <- rownames(match_aggregate)
+match_aggregate$prediction_6up15d <- prediction_dataset$Predicted
+prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/realtime_data_predictions_working_model_V3_primary8up20d_output.tsv",sep="\t")
+rownames(prediction_dataset) <- rownames(match_aggregate)
+match_aggregate$prediction_8up20d <- prediction_dataset$Predicted
+prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/realtime_data_predictions_working_model_V3_primary10up25d_output.tsv",sep="\t")
+rownames(prediction_dataset) <- rownames(match_aggregate)
+match_aggregate$prediction_10up25d <- prediction_dataset$Predicted
+prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/realtime_data_predictions_working_model_V3_primary20up50d_output.tsv",sep="\t")
+rownames(prediction_dataset) <- rownames(match_aggregate)
+match_aggregate$prediction_20up50d <- prediction_dataset$Predicted
+prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/realtime_data_predictions_working_model_V3_primary0down5d_output.tsv",sep="\t")
+rownames(prediction_dataset) <- rownames(match_aggregate)
+match_aggregate$prediction_0down5d <- prediction_dataset$Predicted
+prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/realtime_data_predictions_working_model_V3_primary0down10d_output.tsv",sep="\t")
+rownames(prediction_dataset) <- rownames(match_aggregate)
+match_aggregate$prediction_0down10d <- prediction_dataset$Predicted
+prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/realtime_data_predictions_working_model_V3_primary0down15d_output.tsv",sep="\t")
+rownames(prediction_dataset) <- rownames(match_aggregate)
+match_aggregate$prediction_0down15d <- prediction_dataset$Predicted
+prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/realtime_data_predictions_working_model_V3_primary0down20d_output.tsv",sep="\t")
+rownames(prediction_dataset) <- rownames(match_aggregate)
+match_aggregate$prediction_0down20d <- prediction_dataset$Predicted
+prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/realtime_data_predictions_working_model_V3_primary0down25d_output.tsv",sep="\t")
+rownames(prediction_dataset) <- rownames(match_aggregate)
+match_aggregate$prediction_0down25d <- prediction_dataset$Predicted
+prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/realtime_data_predictions_working_model_V3_primary0down50d_output.tsv",sep="\t")
+rownames(prediction_dataset) <- rownames(match_aggregate)
+match_aggregate$prediction_0down50d <- prediction_dataset$Predicted
 
-date_to_check <- "2024-04-15"
-##Select marketbeat date that is the next day after the date to check from the model prediction due to the timing of the data
-temp_mbData <- readRDS(paste0("E:/Market_Data/MarketBeat/MarketBeat_SP500_data_",as.Date(date_to_check,format = "%Y-%m-%d") + 1,".RDS"))
-temp_mbData <- temp_mbData[,c("analyst_rating","updownside","analyst_score","price_target",
-                              "short_interest","shares_sold_short","dividend_strength","sustainability_score",
-                              "news_sentiment","insider_trading","projected_earnings_growth")]
+temp_date_list <- seq.Date(min(match_aggregate$EOD_option_quote_date),max(match_aggregate$EOD_option_quote_date),by=1)
+temp_date_list <- temp_date_list[temp_date_list >= "2024-04-15"]
+for(temp_date_i in 1:length(temp_date_list)){
+  temp_date <- temp_date_list[temp_date_i]
+  if(temp_date %in% match_aggregate$EOD_option_quote_date){
+    
+    date_to_check <- temp_date
+    ##Select marketbeat date that is the next day after the date to check from the model prediction due to the timing of the data
+    temp_mbData <- readRDS(paste0("E:/Market_Data/MarketBeat/MarketBeat_SP500_data_",as.Date(date_to_check,format = "%Y-%m-%d") + 1,".RDS"))
+    temp_mbData <- temp_mbData[,c("analyst_rating","updownside","analyst_score","price_target",
+                                  "short_interest","shares_sold_short","dividend_strength","sustainability_score",
+                                  "news_sentiment","insider_trading","projected_earnings_growth")]
+    
+    temp_pred <- match_aggregate[match_aggregate$EOD_option_quote_date == date_to_check,]
+    temp_pred <- cbind(temp_pred,temp_mbData[temp_pred$EOD_option_underlying_ticker,])
+    temp_output <- temp_pred[,c("prediction_2up5d","prediction_4up10d","prediction_6up15d","prediction_8up20d","prediction_10up25d","prediction_20up50d",
+                           "prediction_0down5d","prediction_0down10d","prediction_0down15d","prediction_0down20d","prediction_0down25d","prediction_0down50d",
+                           "avgOpenClose","EOD_option_underlying_ticker","EOD_option_quote_date",
+                           colnames(temp_pred)[grepl("relative_avgOpenClose_ahead",colnames(temp_pred))],colnames(temp_mbData))]
+    write.table(temp_output,file=paste0("C:/Users/Andy/Downloads/Investing files/Investing_Project_Rstudio/test_prediction_output_",temp_date,".tsv"),sep="\t")
+    
+  }
+}
 
-temp_pred <- prediction_dataset[prediction_dataset$EOD_option_quote_date == date_to_check,]
-temp_pred <- cbind(temp_pred,temp_mbData[temp_pred$EOD_option_underlying_ticker,])
-test <- temp_pred[temp_pred$Predicted == "True",]
-test[1:5,c("Predicted","avgOpenClose","EOD_option_underlying_ticker","EOD_option_quote_date","relative_avgOpenClose_ahead10",
-           colnames(temp_mbData))]
-test_upside_val <- unlist(lapply(test$updownside,function(x){as.numeric(str_replace(str_split(x," ")[[1]][1],"%",""))}))
-test_upside_dir <- unlist(lapply(test$updownside,function(x){str_split(x," ")[[1]][2]}))
-test[test_upside_dir == "Upside" & test_upside_val > 40,c("Predicted","avgOpenClose","EOD_option_underlying_ticker",
-                                                          "EOD_option_quote_date","relative_avgOpenClose_ahead10",colnames(temp_mbData))]
+
+
 
 
 
