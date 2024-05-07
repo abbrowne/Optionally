@@ -2716,7 +2716,7 @@ for(temp_date_i in 1:length(temp_date_list)){
     temp_output <- temp_pred[,c("prediction_2up5d","prediction_4up10d","prediction_6up15d","prediction_8up20d","prediction_10up25d","prediction_20up50d",
                            "prediction_0down5d","prediction_0down10d","prediction_0down15d","prediction_0down20d","prediction_0down25d","prediction_0down50d",
                            "avgOpenClose","EOD_option_underlying_ticker","EOD_option_quote_date",
-                           colnames(temp_pred)[grepl("relative_avgOpenClose_ahead",colnames(temp_pred))],colnames(temp_mbData))]
+                           colnames(temp_pred)[grepl("avgOpenClose",colnames(temp_pred))],colnames(temp_mbData))]
     write.table(temp_output,file=paste0("C:/Users/Andy/Downloads/Investing files/Investing_Project_Rstudio/test_prediction_output_",temp_date,".tsv"),sep="\t")
     
   }
