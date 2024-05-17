@@ -1038,6 +1038,11 @@ saveRDS(temp_data,"E:/Market_Data/SP500_sectors_20240404.RDS")
 
 library(quantmod)
 
+current_splits <- readRDS("E:/Market_Data/SP500_splits_current_working.RDS")
+last_split_date <- max(current_splits$date)
+temp_first_date <- last_split_date + 1
+temp_last_date <- Sys.Date()
+
 SP500_tickers <- readRDS("E:/Market_Data/SP500_tickers_20240404.RDS")
 SP500_tickers <- unlist(lapply(SP500_tickers,function(x){str_replace_all(x,"[.]","-")}))
 
@@ -1053,7 +1058,7 @@ all_splits = NULL
 for(temp_ticker_i in 1:length(SP500_tickers)){
   temp_ticker = SP500_tickers[temp_ticker_i]
   if(!(temp_ticker %in% stocks_to_drop)){
-    splits <- getSplits(temp_ticker,from="2021-05-10",to="2024-04-11")
+    splits <- getSplits(temp_ticker,from=temp_first_date,to=temp_last_date)
     temp_splits = as.data.frame(list(ticker=c(rep(temp_ticker,length(index(splits)))),date=c(index(splits))))
     if(is.null(all_splits)){
       all_splits = temp_splits
@@ -1065,8 +1070,14 @@ for(temp_ticker_i in 1:length(SP500_tickers)){
     print(paste0("Finished with ",temp_ticker_i," tickers"))
   }
 }
+all_splits <- all_splits[all_splits$date > temp_first_date,]
+if(nrow(all_splits) > 0){
+  current_splits <- rbind(current_splits,all_splits)
+  saveRDS(current_splits,"E:/Market_Data/SP500_splits_current_working.RDS")
+}
 
-saveRDS(all_splits,"E:/Market_Data/SP500_splits_20240411.RDS")
+
+
 
 ```
 
@@ -1363,14 +1374,14 @@ merge_aggregate <- as.data.frame(cbind(option_aggregate,
                                                        !(colnames(EMA50_aggregate) %in% c("EMA50_option_underlying_ticker","EMA50_option_quote_date"))]))
 
 ###Merge with outcomes
-full_outcomes <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/full_outcomesV2_20210514_to_20240404.RDS")
-colnames(full_outcomes) <- paste0("outcomes_",colnames(full_outcomes))
-rownames(full_outcomes) <- paste0(full_outcomes$outcomes_option_underlying_ticker,"_",
-                                     format(full_outcomes$outcomes_option_quote_date, format = "%Y%m%d"))
-full_outcomes <- full_outcomes[rownames(full_outcomes) %in% rownames(merge_aggregate),]
-merge_aggregate <- as.data.frame(cbind(merge_aggregate,
-                                       full_outcomes[rownames(merge_aggregate),
-                                                      !(colnames(full_outcomes) %in% c("outcomes_option_underlying_ticker","outcomes_option_quote_date"))]))
+#full_outcomes <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/full_outcomesV2_20210514_to_20240404.RDS")
+#colnames(full_outcomes) <- paste0("outcomes_",colnames(full_outcomes))
+#rownames(full_outcomes) <- paste0(full_outcomes$outcomes_option_underlying_ticker,"_",
+#                                     format(full_outcomes$outcomes_option_quote_date, format = "%Y%m%d"))
+#full_outcomes <- full_outcomes[rownames(full_outcomes) %in% rownames(merge_aggregate),]
+#merge_aggregate <- as.data.frame(cbind(merge_aggregate,
+#                                       full_outcomes[rownames(merge_aggregate),
+#                                                      !(colnames(full_outcomes) %in% c("outcomes_option_underlying_ticker","outcomes_option_quote_date"))]))
 
 ###Add in daily interest rate for each date
 all_rates <- readRDS("E:/Market_Data/FedRateDF_20000101_to_20240404.RDS")
@@ -1395,14 +1406,36 @@ colnames(temp_dummies) <- unlist(lapply(colnames(temp_dummies),function(x){str_r
 # Convert matrix to a dataframe and concatenate with the original dataframe
 merge_aggregate <- cbind(merge_aggregate, as.data.frame(temp_dummies))
 merge_aggregate$underlying_stock_sector_ <- NULL
-saveRDS(merge_aggregate,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/prefilter_merged_aggregate_for_NN_20210514_to_20240404.RDS")
-##Remove rows with any NA values
-merge_aggregate <- merge_aggregate[rowSums(is.na(merge_aggregate)) == 0,]
-saveRDS(merge_aggregate,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/merged_aggregate_for_NN_20210514_to_20240404.RDS")
 
-merge_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/merged_aggregate_for_NN_20210514_to_20240404.RDS")
-test_input <- merge_aggregate[,grepl("_volume_",colnames(merge_aggregate)) | 
-                                          grepl("_open_interest_",colnames(merge_aggregate))]
+full_results <- readRDS("E:/Market_Data/SP500_3yr_price_history_with_EMAs_and_outcomes_current_working.RDS")
+full_results <- full_results[full_results$Date <= max(merge_aggregate$EOD_option_quote_date),]
+
+####
+
+match_aggregate <- merge_aggregate[rownames(merge_aggregate) %in% rownames(full_results),]
+match_comp <- full_results[rownames(match_aggregate),]
+match_aggregate <- cbind(match_aggregate,match_comp)
+
+###Add in relative EMA values
+match_aggregate$relative_EMA5 <- match_aggregate$EMA5 / match_aggregate$avgOpenClose
+match_aggregate$relative_EMA10 <- match_aggregate$EMA10 / match_aggregate$avgOpenClose
+match_aggregate$relative_EMA15 <- match_aggregate$EMA15 / match_aggregate$avgOpenClose
+match_aggregate$relative_EMA20 <- match_aggregate$EMA20 / match_aggregate$avgOpenClose
+match_aggregate$relative_EMA25 <- match_aggregate$EMA25 / match_aggregate$avgOpenClose
+match_aggregate$relative_EMA50 <- match_aggregate$EMA50 / match_aggregate$avgOpenClose
+
+for(temp_counter_i in 1:50){
+ match_aggregate[,paste0("relative_avgOpenClose_ahead",temp_counter_i)] <- match_aggregate[,paste0("avgOpenClose_ahead",temp_counter_i)] / match_aggregate$avgOpenClose
+}
+
+##Remove rows with any NA values
+#match_aggregate <- match_aggregate[rowSums(is.na(match_aggregate[,!grepl("ahead",colnames(match_aggregate))])) == 0,]
+match_aggregate <- match_aggregate[rowSums(is.na(match_aggregate)) == 0,]
+match_aggregate[,grepl("FedInterestRate",colnames(match_aggregate)) | grepl("relative_",colnames(match_aggregate))] <- 
+  round(match_aggregate[,grepl("FedInterestRate",colnames(match_aggregate)) | grepl("relative_",colnames(match_aggregate))],3)
+
+test_input <- match_aggregate[,grepl("_volume_",colnames(match_aggregate)) | 
+                                grepl("_open_interest_",colnames(match_aggregate))]
 test_input <- test_input + 1
 temp_logic <- grepl("EOD_",colnames(test_input))
 test_input[,temp_logic] <- test_input[,temp_logic] / rowSums(test_input[,temp_logic])
@@ -1416,16 +1449,121 @@ temp_logic <- grepl("EMA50_",colnames(test_input))
 test_input[,temp_logic] <- test_input[,temp_logic] / rowSums(test_input[,temp_logic])
 test_input <- log10(test_input)
 robustScalerFxn <- function(x){
-    x <- ((x - median(x)) / IQR(x))
+  x <- ((x - median(x)) / IQR(x))
 }
 test_input <- test_input %>%
-    mutate(across(everything(), robustScalerFxn))
+  mutate(across(everything(), robustScalerFxn))
 
-extra_input <- merge_aggregate[,grepl("_FedInterestRate",colnames(merge_aggregate))]
+extra_input <- match_aggregate[,grepl("_FedInterestRate",colnames(match_aggregate)) | grepl("relative_EMA",colnames(match_aggregate))]
 test_input <- cbind(test_input,extra_input)
 test_input <- round(test_input,3)
-extra_input <- merge_aggregate[,grepl("underlying_stock_sector_",colnames(merge_aggregate))]
+extra_input <- match_aggregate[,grepl("underlying_stock_sector_",colnames(match_aggregate))]
 test_input <- cbind(test_input,extra_input)
+
+#filtered_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/matched_aggregate_V4_for_NN.RDS")
+#last_training_date <- max(filtered_aggregate$EOD_option_quote_date)
+#test_input <- test_input[match_aggregate$EOD_option_quote_date > last_training_date,]
+#match_aggregate <- match_aggregate[match_aggregate$EOD_option_quote_date > last_training_date,]
+last_training_date <- max(match_aggregate$EOD_option_quote_date)
+
+####
+
+test_group <- match_aggregate$outcomes_5d02pctEMA5above
+test_output = as.numeric(test_group)
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V4_5d02pctAbove_for_NN.tsv",sep="\t")
+
+test_group <- match_aggregate$outcomes_10d04pctEMA5above
+test_output = as.numeric(test_group)
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V4_10d04pctAbove_for_NN.tsv",sep="\t")
+
+test_group <- match_aggregate$outcomes_15d06pctEMA5above
+test_output = as.numeric(test_group)
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V4_15d06pctAbove_for_NN.tsv",sep="\t")
+
+test_group <- match_aggregate$outcomes_20d08pctEMA5above
+test_output = as.numeric(test_group)
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V4_20d08pctAbove_for_NN.tsv",sep="\t")
+
+test_group <- match_aggregate$outcomes_25d10pctEMA5above
+test_output = as.numeric(test_group)
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V4_25d10pctAbove_for_NN.tsv",sep="\t")
+
+test_group <- match_aggregate$outcomes_50d20pctEMA5above
+test_output = as.numeric(test_group)
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V4_50d20pctAbove_for_NN.tsv",sep="\t")
+
+test_group <- match_aggregate$outcomes_5d0pctEMA5below
+test_output = as.numeric(test_group)
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V4_5d0pctBelow_for_NN.tsv",sep="\t")
+
+test_group <- match_aggregate$outcomes_10d0pctEMA5below
+test_output = as.numeric(test_group)
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V4_10d0pctBelow_for_NN.tsv",sep="\t")
+
+test_group <- match_aggregate$outcomes_15d0pctEMA5below
+test_output = as.numeric(test_group)
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V4_15d0pctBelow_for_NN.tsv",sep="\t")
+
+test_group <- match_aggregate$outcomes_20d0pctEMA5below
+test_output = as.numeric(test_group)
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V4_20d0pctBelow_for_NN.tsv",sep="\t")
+
+test_group <- match_aggregate$outcomes_25d0pctEMA5below
+test_output = as.numeric(test_group)
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V4_25d0pctBelow_for_NN.tsv",sep="\t")
+
+test_group <- match_aggregate$outcomes_50d0pctEMA5below
+test_output = as.numeric(test_group)
+write.table(test_output,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_output_V4_50d0pctBelow_for_NN.tsv",sep="\t")
+
+for(temp_i in 1:50){
+  temp_colname <- paste0("relative_avgOpenClose_ahead",temp_i)
+  temp_base_dir <- "E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/"
+  temp_filename <- paste0(temp_base_dir,"test_output_V4_avgOpenClose",temp_i,"dAhead_for_NN.tsv")
+  write.table(match_aggregate[,temp_colname],file=temp_filename,sep="\t")
+}
+
+####
+
+write.table(t(test_input),file=paste0("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/test_input_V4_for_prediction_with_NN_20240314_to_",
+                                      paste0(unlist(str_split(last_training_date,"-")),collapse = ""),".tsv"),sep="\t")
+saveRDS(match_aggregate,paste0("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/full_aggregate_V4_for_prediction_with_NN_20240314_to_",
+                               paste0(unlist(str_split(last_training_date,"-")),collapse = ""),".RDS"))
+
+
+#######################################################################Remove below once above working
+
+#saveRDS(merge_aggregate,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/prefilter_merged_aggregate_for_NN_20210514_to_20240404.RDS")
+##Remove rows with any NA values
+#merge_aggregate <- merge_aggregate[rowSums(is.na(merge_aggregate)) == 0,]
+#saveRDS(merge_aggregate,file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/merged_aggregate_for_NN_20210514_to_20240404.RDS")
+
+#merge_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/merged_aggregate_for_NN_20210514_to_20240404.RDS")
+#test_input <- merge_aggregate[,grepl("_volume_",colnames(merge_aggregate)) | 
+#                                          grepl("_open_interest_",colnames(merge_aggregate))]
+#test_input <- test_input + 1
+#temp_logic <- grepl("EOD_",colnames(test_input))
+#test_input[,temp_logic] <- test_input[,temp_logic] / rowSums(test_input[,temp_logic])
+#temp_logic <- grepl("EMA5_",colnames(test_input))
+#test_input[,temp_logic] <- test_input[,temp_logic] / rowSums(test_input[,temp_logic])
+#temp_logic <- grepl("EMA10_",colnames(test_input))
+#test_input[,temp_logic] <- test_input[,temp_logic] / rowSums(test_input[,temp_logic])
+#temp_logic <- grepl("EMA20_",colnames(test_input))
+#test_input[,temp_logic] <- test_input[,temp_logic] / rowSums(test_input[,temp_logic])
+#temp_logic <- grepl("EMA50_",colnames(test_input))
+#test_input[,temp_logic] <- test_input[,temp_logic] / rowSums(test_input[,temp_logic])
+#test_input <- log10(test_input)
+#robustScalerFxn <- function(x){
+#    x <- ((x - median(x)) / IQR(x))
+#}
+#test_input <- test_input %>%
+#    mutate(across(everything(), robustScalerFxn))
+
+#extra_input <- merge_aggregate[,grepl("_FedInterestRate",colnames(merge_aggregate))]
+#test_input <- cbind(test_input,extra_input)
+#test_input <- round(test_input,3)
+#extra_input <- merge_aggregate[,grepl("underlying_stock_sector_",colnames(merge_aggregate))]
+#test_input <- cbind(test_input,extra_input)
 
 ###Create NN test input and output datasets
 #test_input = as.matrix(merge_aggregate[,!(colnames(merge_aggregate) %in% 
@@ -1435,7 +1573,7 @@ test_input <- cbind(test_input,extra_input)
 #                                              colnames(merge_aggregate)[grepl("_listings_",colnames(merge_aggregate))]))])
 
 #write.table(t(test_input),file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/test_input_for_NN_20210514_to_20240404.tsv",sep="\t")
-write.table(t(test_input),file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_inputV2_for_NN_20210514_to_20240404.tsv",sep="\t")
+#write.table(t(test_input),file="E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/test_inputV2_for_NN_20210514_to_20240404.tsv",sep="\t")
 
 test_group = as.factor(merge_aggregate$outcomes_time1_increase2 > 0 | 
                          merge_aggregate$outcomes_time2_increase2 > 0 | 
@@ -2659,44 +2797,20 @@ library(bizdays)     # For business days calculation
 library(stringr)
 library(dplyr)
 
-match_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/full_aggregate_V3_for_prediction_with_NN_20240314_to_20240506.RDS")
+match_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/full_aggregate_V4_for_prediction_with_NN_20240314_to_20240516.RDS")
 
-prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/realtime_data_predictions_working_model_V3_primary2up5d_output.tsv",sep="\t")
-rownames(prediction_dataset) <- rownames(match_aggregate)
-match_aggregate$prediction_2up5d <- prediction_dataset$Predicted
-prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/realtime_data_predictions_working_model_V3_primary4up10d_output.tsv",sep="\t")
-rownames(prediction_dataset) <- rownames(match_aggregate)
-match_aggregate$prediction_4up10d <- prediction_dataset$Predicted
-prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/realtime_data_predictions_working_model_V3_primary6up15d_output.tsv",sep="\t")
-rownames(prediction_dataset) <- rownames(match_aggregate)
-match_aggregate$prediction_6up15d <- prediction_dataset$Predicted
-prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/realtime_data_predictions_working_model_V3_primary8up20d_output.tsv",sep="\t")
-rownames(prediction_dataset) <- rownames(match_aggregate)
-match_aggregate$prediction_8up20d <- prediction_dataset$Predicted
-prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/realtime_data_predictions_working_model_V3_primary10up25d_output.tsv",sep="\t")
-rownames(prediction_dataset) <- rownames(match_aggregate)
-match_aggregate$prediction_10up25d <- prediction_dataset$Predicted
-prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/realtime_data_predictions_working_model_V3_primary20up50d_output.tsv",sep="\t")
-rownames(prediction_dataset) <- rownames(match_aggregate)
-match_aggregate$prediction_20up50d <- prediction_dataset$Predicted
-prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/realtime_data_predictions_working_model_V3_primary0down5d_output.tsv",sep="\t")
-rownames(prediction_dataset) <- rownames(match_aggregate)
-match_aggregate$prediction_0down5d <- prediction_dataset$Predicted
-prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/realtime_data_predictions_working_model_V3_primary0down10d_output.tsv",sep="\t")
-rownames(prediction_dataset) <- rownames(match_aggregate)
-match_aggregate$prediction_0down10d <- prediction_dataset$Predicted
-prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/realtime_data_predictions_working_model_V3_primary0down15d_output.tsv",sep="\t")
-rownames(prediction_dataset) <- rownames(match_aggregate)
-match_aggregate$prediction_0down15d <- prediction_dataset$Predicted
-prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/realtime_data_predictions_working_model_V3_primary0down20d_output.tsv",sep="\t")
-rownames(prediction_dataset) <- rownames(match_aggregate)
-match_aggregate$prediction_0down20d <- prediction_dataset$Predicted
-prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/realtime_data_predictions_working_model_V3_primary0down25d_output.tsv",sep="\t")
-rownames(prediction_dataset) <- rownames(match_aggregate)
-match_aggregate$prediction_0down25d <- prediction_dataset$Predicted
-prediction_dataset <- read.csv("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/realtime_data_predictions_working_model_V3_primary0down50d_output.tsv",sep="\t")
-rownames(prediction_dataset) <- rownames(match_aggregate)
-match_aggregate$prediction_0down50d <- prediction_dataset$Predicted
+base_dir <- "E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/"
+prediction_files <- list.files(base_dir)
+prediction_files <- prediction_files[grepl("_V4_",prediction_files) & grepl("realtime_",prediction_files)]
+prediction_names <- unlist(lapply(prediction_files,function(x){paste0("prediction_",str_split(x,"_")[[1]][8])}))
+alt_names <- unlist(lapply(prediction_names,function(x){str_replace(x,"prediction_","predictionProbability_")}))
+
+for(temp_i in 1:length(prediction_files)){
+  prediction_dataset <- read.csv(paste0(base_dir,prediction_files[temp_i]),sep="\t")
+  rownames(prediction_dataset) <- rownames(match_aggregate)
+  match_aggregate[,prediction_names[temp_i]] <- prediction_dataset$Predicted
+  match_aggregate[,alt_names[temp_i]] <- prediction_dataset$Probability
+}
 
 temp_date_list <- seq.Date(min(match_aggregate$EOD_option_quote_date),max(match_aggregate$EOD_option_quote_date),by=1)
 temp_date_list <- temp_date_list[temp_date_list >= "2024-04-15"]
@@ -2713,10 +2827,10 @@ for(temp_date_i in 1:length(temp_date_list)){
     
     temp_pred <- match_aggregate[match_aggregate$EOD_option_quote_date == date_to_check,]
     temp_pred <- cbind(temp_pred,temp_mbData[temp_pred$EOD_option_underlying_ticker,])
-    temp_output <- temp_pred[,c("prediction_2up5d","prediction_4up10d","prediction_6up15d","prediction_8up20d","prediction_10up25d","prediction_20up50d",
-                           "prediction_0down5d","prediction_0down10d","prediction_0down15d","prediction_0down20d","prediction_0down25d","prediction_0down50d",
-                           "avgOpenClose","EOD_option_underlying_ticker","EOD_option_quote_date",
-                           colnames(temp_pred)[grepl("avgOpenClose",colnames(temp_pred))],colnames(temp_mbData))]
+    temp_output <- temp_pred[,c(colnames(temp_pred)[grepl("prediction_",colnames(temp_pred))],
+                                colnames(temp_pred)[grepl("ahead",colnames(temp_pred))],
+                                "avgOpenClose","EOD_option_underlying_ticker","EOD_option_quote_date",colnames(temp_mbData))]
+    temp_output[,grepl("prediction_change",colnames(temp_output))] <- round(temp_output[,grepl("prediction_change",colnames(temp_output))],3)
     write.table(temp_output,file=paste0("C:/Users/Andy/Downloads/Investing files/Investing_Project_Rstudio/test_prediction_output_",temp_date,".tsv"),sep="\t")
     
   }

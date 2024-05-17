@@ -5,6 +5,7 @@ library(parallel)    # For parallel processing
 library(bizdays)     # For business days calculation
 library(dplyr)
 library(stringr)
+library(quantmod)
 
 ###
 
@@ -1186,7 +1187,30 @@ EMA50_aggregate <- EMA50_aggregate[order(EMA50_aggregate$option_underlying_ticke
 ###Remove dates surrounding stock splits
 #SP500_splits <- readRDS(paste0("E:/Market_Data/SP500_splits_",paste0(unlist(str_split(added_dates[1],"-")),collapse = ""),".RDS"))
 
-library(quantmod)
+safe_execute_yahoo_splits <- function(input_ticker,input_start_date,input_end_date){
+  temp_results <- NULL
+  max_attempts <- 5
+  attempt <- 1
+  while(is.null(temp_results) && attempt <= max_attempts){
+    if(attempt > 1){
+      cat("Attempt", attempt, "...\n")
+    }
+    temp_results <- tryCatch(
+      {
+        # Attempt to execute the function
+        as.data.frame(getSplits(input_ticker,from = input_start_date, to = input_end_date))
+      },
+      error = function(e) {
+        # Print the error message
+        message("An error occurred: ", e$message)
+        # Return NULL or any default value to indicate the error
+        NULL
+      }
+    )
+    attempt <- attempt + 1
+  }
+  return(temp_results)
+}
 
 current_splits <- readRDS("E:/Market_Data/SP500_splits_current_working.RDS")
 last_split_date <- max(current_splits$date)
@@ -1201,12 +1225,20 @@ all_splits = NULL
 for(temp_ticker_i in 1:length(SP500_tickers)){
   temp_ticker = SP500_tickers[temp_ticker_i]
   if(!(temp_ticker %in% stocks_to_drop)){
-    splits <- getSplits(temp_ticker,from=temp_first_date,to=temp_last_date)
-    temp_splits = as.data.frame(list(ticker=c(rep(temp_ticker,length(index(splits)))),date=c(index(splits))))
-    if(is.null(all_splits)){
-      all_splits = temp_splits
-    }else{
-      all_splits = rbind(all_splits,temp_splits)
+    if(temp_last_date > temp_first_date){
+      
+      temp_results <- safe_execute_yahoo_splits(temp_ticker,temp_first_date,temp_last_date)
+      
+      if (is.null(temp_results)) {
+        cat("Failed to compute the result for ticker:", temp_ticker, "\n")
+      }else{
+        temp_splits = as.data.frame(list(ticker=c(rep(temp_ticker,length(index(temp_results)))),date=c(index(temp_results))))
+        if(is.null(all_splits)){
+          all_splits = temp_splits
+        }else{
+          all_splits = rbind(all_splits,temp_splits)
+        }
+      }
     }
   }
   if(temp_ticker_i %% 50 == 0){
@@ -1307,12 +1339,36 @@ merge_aggregate$underlying_stock_sector_ <- NULL
 
 ###
 
-library(quantmod)
-
 SP500_tickers <- readRDS("E:/Market_Data/SP500_tickers_20240404.RDS")
 SP500_tickers <- unlist(lapply(SP500_tickers,function(x){str_replace_all(x,"[.]","-")}))
 
 current_results <- readRDS("E:/Market_Data/SP500_3yr_price_history_current_working.RDS")
+##current_results <- NULL
+
+safe_execute_yahoo_prices <- function(input_ticker,input_start_date,input_end_date){
+  temp_results <- NULL
+  max_attempts <- 5
+  attempt <- 1
+  while(is.null(temp_results) && attempt <= max_attempts){
+    if(attempt > 1){
+      cat("Attempt", attempt, "...\n")
+    }
+    temp_results <- tryCatch(
+      {
+        # Attempt to execute the function
+        as.data.frame(getSymbols(input_ticker, src = "yahoo", from = input_start_date, to = input_end_date, auto.assign = FALSE))
+      },
+      error = function(e) {
+        # Print the error message
+        message("An error occurred: ", e$message)
+        # Return NULL or any default value to indicate the error
+        NULL
+      }
+    )
+    attempt <- attempt + 1
+  }
+  return(temp_results)
+}
 
 full_results <- NULL
 for(temp_ticker_i in 1:length(SP500_tickers)){
@@ -1325,17 +1381,25 @@ for(temp_ticker_i in 1:length(SP500_tickers)){
   end_date <- Sys.Date()
   end_date <- format(end_date, "%Y-%m-%d")
   if(start_date < end_date){
-    temp_results <- as.data.frame(getSymbols(temp_ticker, src = "yahoo", from = start_date, to = end_date, auto.assign = FALSE))
-    colnames(temp_results) <- c("Open","High","Low","Close","Volume","Adjusted")
-    temp_results$Date <- as.Date(rownames(temp_results), format = "%Y-%m-%d")
-    temp_results$Ticker <- temp_ticker
-    rownames(temp_results) <- paste0(temp_ticker,"_",rownames(temp_results))
-    if(is.null(full_results)){
-      full_results <- temp_results
+    
+    temp_results <- safe_execute_yahoo_prices(temp_ticker,start_date,end_date)
+    
+    if (is.null(temp_results)) {
+      cat("Failed to compute the result for ticker:", temp_ticker, "\n")
     }else{
-      full_results <- rbind(full_results,temp_results)
+    
+      #temp_results <- as.data.frame(getSymbols(temp_ticker, src = "yahoo", from = start_date, to = end_date, auto.assign = FALSE))
+      colnames(temp_results) <- c("Open","High","Low","Close","Volume","Adjusted")
+      temp_results$Date <- as.Date(rownames(temp_results), format = "%Y-%m-%d")
+      temp_results$Ticker <- temp_ticker
+      rownames(temp_results) <- paste0(temp_ticker,"_",rownames(temp_results))
+      if(is.null(full_results)){
+        full_results <- temp_results
+      }else{
+        full_results <- rbind(full_results,temp_results)
+      }
+      print(paste0("Finished with ",temp_ticker))
     }
-    print(paste0("Finished with ",temp_ticker))
   }
 }
 if(!is.null(full_results)){
@@ -1344,9 +1408,10 @@ if(!is.null(full_results)){
   }else{
     current_results <- rbind(current_results,full_results)
   }
+  saveRDS(current_results,file=paste0("E:/Market_Data/SP500_3yr_price_history_current_working.RDS"))
 }
 
-saveRDS(current_results,file=paste0("E:/Market_Data/SP500_3yr_price_history_current_working.RDS"))
+
 
 ###
 
@@ -1572,7 +1637,7 @@ for(temp_counter_i in 1:50){
 }
 
 ##Remove rows with any NA values
-match_aggregate <- match_aggregate[rowSums(is.na(match_aggregate[,!grepl("ahead",colnames(match_aggregate))])) == 0,]
+match_aggregate <- match_aggregate[rowSums(is.na(match_aggregate[,!grepl("ahead",colnames(match_aggregate)) & !grepl("outcomes_",colnames(match_aggregate))])) == 0,]
 match_aggregate[,grepl("FedInterestRate",colnames(match_aggregate)) | grepl("relative_",colnames(match_aggregate))] <- 
   round(match_aggregate[,grepl("FedInterestRate",colnames(match_aggregate)) | grepl("relative_",colnames(match_aggregate))],3)
 
@@ -1602,7 +1667,7 @@ test_input <- round(test_input,3)
 extra_input <- match_aggregate[,grepl("underlying_stock_sector_",colnames(match_aggregate))]
 test_input <- cbind(test_input,extra_input)
 
-filtered_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/matched_aggregate_V4_for_NN.RDS")
+filtered_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/full_aggregate_V4_for_prediction_with_NN_20240314_to_20240228.RDS")
 last_training_date <- max(filtered_aggregate$EOD_option_quote_date)
 test_input <- test_input[match_aggregate$EOD_option_quote_date > last_training_date,]
 match_aggregate <- match_aggregate[match_aggregate$EOD_option_quote_date > last_training_date,]
