@@ -2827,7 +2827,7 @@ for(temp_date_i in 1:length(temp_date_list)){
     
     temp_pred <- match_aggregate[match_aggregate$EOD_option_quote_date == date_to_check,]
     temp_pred <- cbind(temp_pred,temp_mbData[temp_pred$EOD_option_underlying_ticker,])
-    temp_output <- temp_pred[,c(colnames(temp_pred)[grepl("prediction_",colnames(temp_pred))],
+    temp_output <- temp_pred[,c(colnames(temp_pred)[grepl("prediction",colnames(temp_pred))],
                                 colnames(temp_pred)[grepl("ahead",colnames(temp_pred))],
                                 "avgOpenClose","EOD_option_underlying_ticker","EOD_option_quote_date",colnames(temp_mbData))]
     temp_output[,grepl("prediction_change",colnames(temp_output))] <- round(temp_output[,grepl("prediction_change",colnames(temp_output))],3)
