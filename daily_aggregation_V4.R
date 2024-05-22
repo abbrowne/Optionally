@@ -1680,3 +1680,7 @@ saveRDS(match_aggregate,paste0("E:/Market_Data/DiscountOptionData/DTNSubscriptio
 
 ###
 
+##Add open and close values and sector and industry
+
+###
+

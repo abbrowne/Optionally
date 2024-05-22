@@ -2797,7 +2797,7 @@ library(bizdays)     # For business days calculation
 library(stringr)
 library(dplyr)
 
-match_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/full_aggregate_V4_for_prediction_with_NN_20240314_to_20240516.RDS")
+match_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/full_aggregate_V4_for_prediction_with_NN_20240314_to_20240521.RDS")
 
 base_dir <- "E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/"
 prediction_files <- list.files(base_dir)
@@ -2811,6 +2811,25 @@ for(temp_i in 1:length(prediction_files)){
   match_aggregate[,prediction_names[temp_i]] <- prediction_dataset$Predicted
   match_aggregate[,alt_names[temp_i]] <- prediction_dataset$Probability
 }
+
+all_sectors <- readRDS("E:/Market_Data/SP500_sectors_20240404.RDS")
+all_sectors$Symbol[all_sectors$Symbol == "BRK.B"] = "BRKB"
+all_sectors$Symbol[all_sectors$Symbol == "BF.B"] = "BFB"
+rownames(all_sectors) <- all_sectors$Symbol
+all_sectors["BRKB","Industry"] <- "Diversified Commercial Services"
+all_sectors["ANSS","Industry"] <- "Computer Software: Prepackaged Software"
+all_sectors["WRK","Industry"] <- "Containers/Packaging"
+all_sectors["GEV","Industry"] <- "Electric Utilities: Central"
+all_sectors["BFB","Industry"] <- "Beverages (Production/Distribution)"
+
+match_aggregate$EOD_underlying_stock_sector <- all_sectors[match_aggregate$EOD_option_underlying_ticker,"Sector"]
+match_aggregate$EOD_underlying_stock_industry <- all_sectors[match_aggregate$EOD_option_underlying_ticker,"Industry"]
+colnames(match_aggregate)[colnames(match_aggregate) == "Open"] <- "EOD_underlying_open_price"
+colnames(match_aggregate)[colnames(match_aggregate) == "Close"] <- "EOD_underlying_close_price"
+colnames(match_aggregate)[colnames(match_aggregate) == "High"] <- "EOD_underlying_high_price"
+colnames(match_aggregate)[colnames(match_aggregate) == "Low"] <- "EOD_underlying_low_price"
+colnames(match_aggregate)[colnames(match_aggregate) == "Volume"] <- "EOD_underlying_total_volume"
+colnames(match_aggregate)[colnames(match_aggregate) == "Adjusted"] <- "EOD_underlying_adjusted_close"
 
 temp_date_list <- seq.Date(min(match_aggregate$EOD_option_quote_date),max(match_aggregate$EOD_option_quote_date),by=1)
 temp_date_list <- temp_date_list[temp_date_list >= "2024-04-15"]
@@ -2827,9 +2846,10 @@ for(temp_date_i in 1:length(temp_date_list)){
     
     temp_pred <- match_aggregate[match_aggregate$EOD_option_quote_date == date_to_check,]
     temp_pred <- cbind(temp_pred,temp_mbData[temp_pred$EOD_option_underlying_ticker,])
-    temp_output <- temp_pred[,c(colnames(temp_pred)[grepl("prediction",colnames(temp_pred))],
-                                colnames(temp_pred)[grepl("ahead",colnames(temp_pred))],
-                                "avgOpenClose","EOD_option_underlying_ticker","EOD_option_quote_date",colnames(temp_mbData))]
+    temp_output <- temp_pred[,c("EOD_option_underlying_ticker","EOD_option_quote_date","avgOpenClose",
+                                colnames(match_aggregate)[grepl("EOD_underlying_",colnames(match_aggregate))],colnames(temp_mbData),
+                                colnames(temp_pred)[grepl("prediction",colnames(temp_pred))],
+                                colnames(temp_pred)[grepl("ahead",colnames(temp_pred))])]
     temp_output[,grepl("prediction_change",colnames(temp_output))] <- round(temp_output[,grepl("prediction_change",colnames(temp_output))],3)
     write.table(temp_output,file=paste0("C:/Users/Andy/Downloads/Investing files/Investing_Project_Rstudio/test_prediction_output_",temp_date,".tsv"),sep="\t")
     
