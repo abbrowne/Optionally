@@ -1141,6 +1141,67 @@ saveRDS(rate_df,file="E:/Market_Data/FedRateDF_20000101_to_20240404.RDS")
 
 ```
 
+```{r working Fed Rate RDS file}
+
+
+all_rates <- read.csv("E:/Market_Data/DFF_20190405_to_20240405_mod.csv")
+all_rates <- all_rates[all_rates$DATE > "2021-01-01",]
+all_rates <- all_rates[order(all_rates$DATE),]
+rownames(all_rates) <- all_rates$DATE
+all_dates <- all_rates$DATE
+all_SMA5 <- c(rep(NA,length(all_dates)))
+all_SMA10 <- c(rep(NA,length(all_dates)))
+all_SMA20 <- c(rep(NA,length(all_dates)))
+all_SMA50 <- c(rep(NA,length(all_dates)))
+all_EMA5 <- c(rep(NA,length(all_dates)))
+all_EMA10 <- c(rep(NA,length(all_dates)))
+all_EMA20 <- c(rep(NA,length(all_dates)))
+all_EMA50 <- c(rep(NA,length(all_dates)))
+for(temp_date_i in 1:length(all_dates)){
+    if(temp_date_i > 4){
+        if(!is.na(all_EMA5[temp_date_i-1])){
+            all_EMA5[temp_date_i] <- round((all_rates[temp_date_i,"DFF"] * (2/6) + all_EMA5[temp_date_i-1] * (1 - (2/6))),5)
+        }else if(!is.na(all_SMA5[temp_date_i-1])){
+            all_EMA5[temp_date_i] <- round((all_rates[temp_date_i,"DFF"] * (2/6) + all_SMA5[temp_date_i-1] * (1 - (2/6))),5)
+        }else{
+            all_SMA5[temp_date_i] <- round(mean(all_rates[all_dates[(temp_date_i-4):temp_date_i],"DFF"]),5)
+        }
+        if(temp_date_i > 9){
+            if(!is.na(all_EMA10[temp_date_i-1])){
+                all_EMA10[temp_date_i] <- round((all_rates[temp_date_i,"DFF"] * (2/11) + all_EMA10[temp_date_i-1] * (1 - (2/11))),5)
+            }else if(!is.na(all_SMA10[temp_date_i-1])){
+                all_EMA10[temp_date_i] <- round((all_rates[temp_date_i,"DFF"] * (2/11) + all_SMA10[temp_date_i-1] * (1 - (2/11))),5)
+            }else{
+                all_SMA10[temp_date_i] <- round(mean(all_rates[all_dates[(temp_date_i-9):temp_date_i],"DFF"]),5)
+            }
+        }
+        if(temp_date_i > 19){
+            if(!is.na(all_EMA20[temp_date_i-1])){
+                all_EMA20[temp_date_i] <- round((all_rates[temp_date_i,"DFF"] * (2/21) + all_EMA20[temp_date_i-1] * (1 - (2/21))),5)
+            }else if(!is.na(all_SMA20[temp_date_i-1])){
+                all_EMA20[temp_date_i] <- round((all_rates[temp_date_i,"DFF"] * (2/21) + all_SMA20[temp_date_i-1] * (1 - (2/21))),5)
+            }else{
+                all_SMA20[temp_date_i] <- round(mean(all_rates[all_dates[(temp_date_i-19):temp_date_i],"DFF"]),5)
+            }
+        }
+        if(temp_date_i > 49){
+            if(!is.na(all_EMA50[temp_date_i-1])){
+                all_EMA50[temp_date_i] <- round((all_rates[temp_date_i,"DFF"] * (2/51) + all_EMA50[temp_date_i-1] * (1 - (2/51))),5)
+            }else if(!is.na(all_SMA50[temp_date_i-1])){
+                all_EMA50[temp_date_i] <- round((all_rates[temp_date_i,"DFF"] * (2/51) + all_SMA50[temp_date_i-1] * (1 - (2/51))),5)
+            }else{
+                all_SMA50[temp_date_i] <- round(mean(all_rates[all_dates[(temp_date_i-49):temp_date_i],"DFF"]),5)
+            }
+        }
+    }
+}
+
+rate_df <- as.data.frame(list(date=all_dates,EOD=all_rates$DFF,EMA5=all_EMA5,EMA10=all_EMA10,EMA20=all_EMA20,EMA50=all_EMA50))
+saveRDS(rate_df,file="E:/Market_Data/FedRateDF_current_working.RDS")
+
+
+```
+
 ```{r create input for NN modeling}
 
 library(dplyr)
@@ -2797,7 +2858,7 @@ library(bizdays)     # For business days calculation
 library(stringr)
 library(dplyr)
 
-match_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/full_aggregate_V4_for_prediction_with_NN_20240314_to_20240521.RDS")
+match_aggregate <- readRDS("E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/full_aggregate_V4_for_prediction_with_NN_20240314_to_20240930.RDS")
 
 base_dir <- "E:/Market_Data/DiscountOptionData/DTNSubscription/revised_derived_aggregates/Freeze20240404/Predictions/"
 prediction_files <- list.files(base_dir)
@@ -2833,24 +2894,118 @@ colnames(match_aggregate)[colnames(match_aggregate) == "Adjusted"] <- "EOD_under
 
 temp_date_list <- seq.Date(min(match_aggregate$EOD_option_quote_date),max(match_aggregate$EOD_option_quote_date),by=1)
 temp_date_list <- temp_date_list[temp_date_list >= "2024-04-15"]
+print(max(temp_date_list))
 for(temp_date_i in 1:length(temp_date_list)){
   temp_date <- temp_date_list[temp_date_i]
   if(temp_date %in% match_aggregate$EOD_option_quote_date){
     
     date_to_check <- temp_date
     ##Select marketbeat date that is the next day after the date to check from the model prediction due to the timing of the data
-    temp_mbData <- readRDS(paste0("E:/Market_Data/MarketBeat/MarketBeat_SP500_data_",as.Date(date_to_check,format = "%Y-%m-%d") + 1,".RDS"))
-    temp_mbData <- temp_mbData[,c("analyst_rating","updownside","analyst_score","price_target",
-                                  "short_interest","shares_sold_short","dividend_strength","sustainability_score",
-                                  "news_sentiment","insider_trading","projected_earnings_growth")]
+    #temp_mbData <- readRDS(paste0("E:/Market_Data/MarketBeat/MarketBeat_SP500_data_",as.Date(date_to_check,format = "%Y-%m-%d") + 1,".RDS"))
+    #temp_mbData <- temp_mbData[,c("analyst_rating","updownside","analyst_score","price_target",
+    #                              "short_interest","shares_sold_short","dividend_strength","sustainability_score",
+    #                              "news_sentiment","insider_trading","projected_earnings_growth")]
     
     temp_pred <- match_aggregate[match_aggregate$EOD_option_quote_date == date_to_check,]
-    temp_pred <- cbind(temp_pred,temp_mbData[temp_pred$EOD_option_underlying_ticker,])
+    #temp_pred <- cbind(temp_pred,temp_mbData[temp_pred$EOD_option_underlying_ticker,])
     temp_output <- temp_pred[,c("EOD_option_underlying_ticker","EOD_option_quote_date","avgOpenClose",
-                                colnames(match_aggregate)[grepl("EOD_underlying_",colnames(match_aggregate))],colnames(temp_mbData),
+                                colnames(match_aggregate)[grepl("EOD_underlying_",colnames(match_aggregate))],#colnames(temp_mbData),
                                 colnames(temp_pred)[grepl("prediction",colnames(temp_pred))],
                                 colnames(temp_pred)[grepl("ahead",colnames(temp_pred))])]
     temp_output[,grepl("prediction_change",colnames(temp_output))] <- round(temp_output[,grepl("prediction_change",colnames(temp_output))],3)
+    temp_columns <- paste0("relative_avgOpenClose_ahead",seq(1,25))
+    temp_output$relativeMax5d <- apply(temp_output[,temp_columns[1:5]], 1, max)
+    temp_output$relativeMax10d <- apply(temp_output[,temp_columns[1:10]], 1, max)
+    temp_output$relativeMax15d <- apply(temp_output[,temp_columns[1:15]], 1, max)
+    temp_output$relativeMax20d <- apply(temp_output[,temp_columns[1:20]], 1, max)
+    temp_output$relativeMax25d <- apply(temp_output[,temp_columns[1:25]], 1, max)
+    temp_columns <- paste0("prediction_change",seq(1,25),"d")
+    temp_output$predMaxChange5d <- apply(temp_output[,temp_columns[1:5]], 1, max)
+    temp_output$predMaxChange10d <- apply(temp_output[,temp_columns[1:10]], 1, max)
+    temp_output$predMaxChange15d <- apply(temp_output[,temp_columns[1:15]], 1, max)
+    temp_output$predMaxChange20d <- apply(temp_output[,temp_columns[1:20]], 1, max)
+    temp_output$predMaxChange25d <- apply(temp_output[,temp_columns[1:25]], 1, max)
+    
+    temp_pred1 <- as.numeric(temp_output$predMaxChange5d >= 1.02)
+    temp_pred2 <- as.numeric(temp_output$predictionProbability_output2up5d > 0.9)
+    temp_pred3 <- -1 * as.numeric(temp_output$predictionProbability_negoutput5d > 0.9)
+    temp_output$predScore5d <- -1 + temp_pred1 + temp_pred2# + temp_pred3
+    temp_output$relativeTarget5d <- 0
+    temp_output$relativeTarget5d[temp_output$relativeMax5d >= 1.01] <- 1
+    temp_output$relativeTarget5d[temp_output$relativeMax5d >= 1.02] <- 2
+    temp_output$relativeTarget5d[temp_output$relativeMax5d >= 1.03] <- 3
+    temp_output$relativeTarget5d[temp_output$relativeMax5d >= 1.04] <- 4
+    temp_output$predTarget5d <- 0
+    temp_output$predTarget5d[temp_output$predMaxChange5d >= 1.01] <- 1
+    temp_output$predTarget5d[temp_output$predMaxChange5d >= 1.02] <- 2
+    temp_output$predTarget5d[temp_output$predMaxChange5d >= 1.03] <- 3
+    temp_output$predTarget5d[temp_output$predMaxChange5d >= 1.04] <- 4
+    
+    temp_pred1 <- as.numeric(temp_output$predMaxChange10d >= 1.04)
+    temp_pred2 <- as.numeric(temp_output$predictionProbability_output4up10d > 0.9)
+    temp_pred3 <- -1 * as.numeric(temp_output$predictionProbability_negoutput10d > 0.9)
+    temp_output$predScore10d <- -1 + temp_pred1 + temp_pred2# + temp_pred3
+    temp_output$relativeTarget10d <- 0
+    temp_output$relativeTarget10d[temp_output$relativeMax10d >= 1.02] <- 1
+    temp_output$relativeTarget10d[temp_output$relativeMax10d >= 1.04] <- 2
+    temp_output$relativeTarget10d[temp_output$relativeMax10d >= 1.06] <- 3
+    temp_output$relativeTarget10d[temp_output$relativeMax10d >= 1.08] <- 4
+    temp_output$predTarget10d <- 0
+    temp_output$predTarget10d[temp_output$predMaxChange10d >= 1.02] <- 1
+    temp_output$predTarget10d[temp_output$predMaxChange10d >= 1.04] <- 2
+    temp_output$predTarget10d[temp_output$predMaxChange10d >= 1.06] <- 3
+    temp_output$predTarget10d[temp_output$predMaxChange10d >= 1.08] <- 4
+    
+    temp_pred1 <- as.numeric(temp_output$predMaxChange15d >= 1.06)
+    temp_pred2 <- as.numeric(temp_output$predictionProbability_output6up15d > 0.9)
+    temp_pred3 <- -1 * as.numeric(temp_output$predictionProbability_negoutput15d > 0.9)
+    temp_output$predScore15d <- -1 + temp_pred1 + temp_pred2# + temp_pred3
+    temp_output$relativeTarget15d <- 0
+    temp_output$relativeTarget15d[temp_output$relativeMax15d >= 1.03] <- 1
+    temp_output$relativeTarget15d[temp_output$relativeMax15d >= 1.06] <- 2
+    temp_output$relativeTarget15d[temp_output$relativeMax15d >= 1.09] <- 3
+    temp_output$relativeTarget15d[temp_output$relativeMax15d >= 1.12] <- 4
+    temp_output$predTarget15d <- 0
+    temp_output$predTarget15d[temp_output$predMaxChange15d >= 1.03] <- 1
+    temp_output$predTarget15d[temp_output$predMaxChange15d >= 1.06] <- 2
+    temp_output$predTarget15d[temp_output$predMaxChange15d >= 1.09] <- 3
+    temp_output$predTarget15d[temp_output$predMaxChange15d >= 1.12] <- 4
+    
+    temp_pred1 <- as.numeric(temp_output$predMaxChange20d >= 1.08)
+    temp_pred2 <- as.numeric(temp_output$predictionProbability_output8up20d > 0.9)
+    temp_pred3 <- -1 * as.numeric(temp_output$predictionProbability_negoutput20d > 0.9)
+    temp_output$predScore20d <- -1 + temp_pred1 + temp_pred2# + temp_pred3
+    temp_output$relativeTarget20d <- 0
+    temp_output$relativeTarget20d[temp_output$relativeMax20d >= 1.04] <- 1
+    temp_output$relativeTarget20d[temp_output$relativeMax20d >= 1.08] <- 2
+    temp_output$relativeTarget20d[temp_output$relativeMax20d >= 1.12] <- 3
+    temp_output$relativeTarget20d[temp_output$relativeMax20d >= 1.16] <- 4
+    temp_output$predTarget20d <- 0
+    temp_output$predTarget20d[temp_output$predMaxChange20d >= 1.04] <- 1
+    temp_output$predTarget20d[temp_output$predMaxChange20d >= 1.08] <- 2
+    temp_output$predTarget20d[temp_output$predMaxChange20d >= 1.12] <- 3
+    temp_output$predTarget20d[temp_output$predMaxChange20d >= 1.16] <- 4
+    
+    temp_pred1 <- as.numeric(temp_output$predMaxChange25d >= 1.10)
+    temp_pred2 <- as.numeric(temp_output$predictionProbability_output10up25d > 0.9)
+    temp_pred3 <- -1 * as.numeric(temp_output$predictionProbability_negoutput25d > 0.9)
+    temp_output$predScore25d <- -1 + temp_pred1 + temp_pred2# + temp_pred3
+    temp_output$relativeTarget25d <- 0
+    temp_output$relativeTarget25d[temp_output$relativeMax25d >= 1.05] <- 1
+    temp_output$relativeTarget25d[temp_output$relativeMax25d >= 1.10] <- 2
+    temp_output$relativeTarget25d[temp_output$relativeMax25d >= 1.15] <- 3
+    temp_output$relativeTarget25d[temp_output$relativeMax25d >= 1.20] <- 4
+    temp_output$predTarget25d <- 0
+    temp_output$predTarget25d[temp_output$predMaxChange25d >= 1.05] <- 1
+    temp_output$predTarget25d[temp_output$predMaxChange25d >= 1.10] <- 2
+    temp_output$predTarget25d[temp_output$predMaxChange25d >= 1.15] <- 3
+    temp_output$predTarget25d[temp_output$predMaxChange25d >= 1.20] <- 4
+    
+    temp_output <- temp_output[,!grepl("EMA5ahead",colnames(temp_output)) & 
+                               !grepl("prediction_negoutput",colnames(temp_output)) & 
+                               !grepl("prediction_output",colnames(temp_output)) & 
+                               (!grepl("avgOpenClose_ahead",colnames(temp_output)) | grepl("relative_",colnames(temp_output)))]
+
     write.table(temp_output,file=paste0("C:/Users/Andy/Downloads/Investing files/Investing_Project_Rstudio/test_prediction_output_",temp_date,".tsv"),sep="\t")
     
   }
